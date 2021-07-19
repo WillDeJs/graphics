@@ -155,6 +155,11 @@ impl TryFrom<Chunk> for PLTE {
                 let color = Color::from_slice(color_chunk);
                 pixels.push(color);
             }
+            // Just in case some images have invalid indexes
+            // lets avoid crashes by making sure all allowed indexes are covered.
+            for _ in 0..256 - pixels.len() {
+                pixels.push(color::BLACK);
+            }
             Ok(Self { colors: pixels })
         }
     }
@@ -583,6 +588,42 @@ impl PNGImage {
             }
             PALETTE_INDEX_CTYPE => {
                 match self.header.bit_depth {
+                    1 => {
+                        if let Some(plte) = &self.plte {
+                            for byte in image_data {
+                                let mut index = byte;
+                                for _ in 0..8 {
+                                    let scaled_index = index >> 7;
+                                    index <<= 1;
+                                    pixels.push(plte.colors[scaled_index as usize]);
+                                }
+                            }
+                        }
+                    }
+                    2 => {
+                        if let Some(plte) = &self.plte {
+                            for byte in image_data {
+                                let mut index = byte;
+                                for _ in 0..4 {
+                                    let scaled_index = index >> 6;
+                                    index <<= 2;
+                                    pixels.push(plte.colors[scaled_index as usize]);
+                                }
+                            }
+                        }
+                    }
+                    4 => {
+                        if let Some(plte) = &self.plte {
+                            for byte in image_data {
+                                let mut index = byte;
+                                for _ in 0..2 {
+                                    let scaled_index = index >> 4;
+                                    index <<= 4;
+                                    pixels.push(plte.colors[scaled_index as usize]);
+                                }
+                            }
+                        }
+                    }
                     8 => {
                         if let Some(plte) = &self.plte {
                             for color_index in &image_data[..] {
