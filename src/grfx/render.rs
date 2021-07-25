@@ -56,6 +56,7 @@ pub trait Render2D {
             .with_inner_size(image_size)
             .with_title(&title)
             .with_resizable(false)
+            .with_transparent(true)
             .build(&event_loop)
             .unwrap();
         // Keyboard/mouse input handler
@@ -134,7 +135,7 @@ pub trait Render2D {
     /// This is useful when rendering  things that are not necessarily drawn by us.
     /// Example: png decoded data.__rust_force_expr!
     ///
-    /// see grfx::image::png::PNGImage#image_pixels
+    /// see grfx::image::png::PNGImage#pixels
     fn render_pixels(width: u32, height: u32, pixels: Vec<Color>) {
         let event_loop = EventLoop::new();
         let image_size = LogicalSize::new(width, height);

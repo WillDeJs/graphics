@@ -1,27 +1,26 @@
 use crate::grfx::canvas::Canvas;
+use crate::grfx::canvas::Transform;
+use crate::grfx::canvas::Transformer;
 use crate::grfx::color;
+use crate::grfx::image::imageutils::*;
 pub use crate::grfx::render::Render2D;
-use crate::grfx::shape::Polygon;
-use crate::math::vector::AngleTrait;
-use crate::math::vector::FVec2D;
-use crate::math::vector::Point2D;
-use winit::event::VirtualKeyCode;
+
 use winit_input_helper::WinitInputHelper;
 
 pub struct Draw2D {
     width: u32,
     height: u32,
     title: String,
-    polygon: Option<Polygon>,
+    tiles: Vec<Sprite>,
 }
 
 impl Draw2D {
-    pub fn new(width: u32, height: u32, title: String) -> Self {
+    pub fn new(width: u32, height: u32, title: String, tiles: Vec<Sprite>) -> Self {
         Draw2D {
             width,
             height,
             title,
-            polygon: None,
+            tiles,
         }
     }
 }
@@ -43,51 +42,27 @@ impl Render2D for Draw2D {
     /// Setup method called when the world is first created
     /// Must be overriden.
     ///
-    fn setup(&mut self, _: &mut Canvas) -> bool {
-        self.polygon = Some(Polygon::new(Point2D::new(50, 50), 3, 50, 0.0));
+    fn setup(&mut self, canvas: &mut Canvas) -> bool {
+        // draw first pass transformed to small no rotation
+        canvas.fill(color::Color::rgb(80, 0, 40));
+        let mut transformer = Transformer::new();
+        transformer.add(Transform::Scale(0.3, 0.3));
+        transformer.add(Transform::Translate(100.0, 100.0));
+        canvas.transform_sprite(&self.tiles[0], &transformer);
+
+        // draw again transformed to slightly bigger with rotation
+        transformer.clear();
+        transformer.add(Transform::Scale(0.5, 0.5));
+        transformer.add(Transform::Translate(200.0, 200.0));
+        transformer.add(Transform::Rotate(0.2));
+        canvas.transform_sprite(&self.tiles[0], &transformer);
         true
     }
 
     /// Update method called when the canvas is to be updated
     /// This is called periodically per frame and each frame is drawn individually
     /// Must be overriden/implmented
-    fn update(&mut self, canvas: &mut Canvas, input: &WinitInputHelper, _delta_t: f32) -> bool {
-        canvas.fill(color::BLUE);
-        if let Some(polygon) = &mut self.polygon {
-            canvas.polygon(
-                polygon.origin,
-                polygon.sides,
-                polygon.side_length,
-                color::CYAN,
-                Some(polygon.angle),
-            );
-            canvas.fill_circle(Point2D::new(100, 100), 30, color::Color::rgba(255, 0, 0, 0));
-            if input.key_pressed(VirtualKeyCode::W) {
-                polygon.origin.y -= 10;
-            }
-            if input.key_pressed(VirtualKeyCode::S) {
-                polygon.origin.y += 10;
-            }
-            if input.key_pressed(VirtualKeyCode::A) {
-                polygon.origin.x -= 10;
-            }
-            if input.key_pressed(VirtualKeyCode::D) {
-                polygon.origin.x += 10;
-            }
-            if input.key_pressed(VirtualKeyCode::Left) {
-                polygon.angle += std::f32::consts::FRAC_PI_4;
-            }
-            if input.key_pressed(VirtualKeyCode::Right) {
-                polygon.angle -= std::f32::consts::FRAC_PI_4;
-            }
-
-            if input.mouse_held(1) {
-                if let Some((x, y)) = input.mouse() {
-                    let direction = (polygon.origin.to_f32() - FVec2D::new(x, y)).angle();
-                    polygon.angle = direction;
-                }
-            }
-        }
+    fn update(&mut self, _: &mut Canvas, _: &WinitInputHelper, _delta_t: f32) -> bool {
         true
     }
 }

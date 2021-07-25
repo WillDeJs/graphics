@@ -1,4 +1,4 @@
-use crate::math::vector::Point2D;
+use crate::math::Point2D;
 #[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub struct Polygon {
     pub origin: Point2D,

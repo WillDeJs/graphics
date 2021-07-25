@@ -1,6 +1,48 @@
 use crate::grfx::color;
 use crate::grfx::color::Color;
-use crate::math::vector::Point2D;
+use crate::grfx::image::imageutils::Sprite;
+use crate::math::Mat3x3;
+use crate::math::Point2D;
+use crate::math::Vector3D;
+
+#[derive(Debug, Copy, Clone)]
+pub enum Transform {
+    Rotate(f32),
+    Scale(f32, f32),
+    Translate(f32, f32),
+}
+#[allow(dead_code, unused_variables)]
+pub struct Transformer {
+    transforms: std::collections::VecDeque<Transform>,
+}
+
+impl Transformer {
+    pub fn new() -> Self {
+        Self {
+            transforms: std::collections::VecDeque::<Transform>::new(),
+        }
+    }
+
+    pub fn add(&mut self, item: Transform) {
+        self.transforms.push_front(item);
+    }
+    pub fn remove(&mut self, index: usize) -> Option<Transform> {
+        self.transforms.remove(index)
+    }
+
+    pub fn clear(&mut self) {
+        self.transforms.clear();
+    }
+    pub fn all(&self) -> Vec<Transform> {
+        (&self.transforms)
+            .into_iter()
+            .map(|el| *el)
+            .collect::<Vec<Transform>>()
+    }
+    pub fn count(&self) -> usize {
+        self.transforms.len()
+    }
+}
 
 #[allow(dead_code, unused_variables)]
 pub struct Canvas {
@@ -45,6 +87,10 @@ impl Canvas {
     ///     color -> pixel color
     ///
     pub fn plot(&mut self, x: i32, y: i32, color: Color) {
+        // Don't paint transparent pixels
+        if color.alpha() == 0 {
+            return;
+        }
         if x >= 0 && x < self.width as i32 && y >= 0 && y < self.height as i32 {
             let normalized_position = (y * self.width as i32 + x) as usize;
             if normalized_position < self.pixels.len() {
@@ -442,6 +488,34 @@ impl Canvas {
             //          b = x0 + (x2 - x0) * (y - y0) / (y2 - y0)
             self.line(a, y, b, y, color);
             y += 1;
+        }
+    }
+
+    pub fn sprite(&mut self, origin: Point2D, tile: &Sprite) {
+        for (i, pixel) in tile.pixels.iter().enumerate() {
+            let x = origin.x() + (i % tile.width) as i32;
+            let y = origin.y() + (i / tile.width) as i32;
+            self.plot(x, y, *pixel);
+        }
+    }
+    pub fn transform_sprite(&mut self, tile: &Sprite, transformer: &Transformer) {
+        let mut transformed = Mat3x3::<f32>::identity();
+
+        for transform in transformer.all() {
+            transformed = transformed
+                * match transform {
+                    Transform::Rotate(angle) => Mat3x3::<f32>::rotate(angle),
+                    Transform::Scale(cx, cy) => Mat3x3::<f32>::scale(cx, cy),
+                    Transform::Translate(cx, cy) => Mat3x3::<f32>::translate(cx, cy),
+                };
+        }
+        for (i, pixel) in tile.pixels.iter().enumerate() {
+            let x = (i % tile.width) as i32;
+            let y = (i / tile.width) as i32;
+
+            let point = Vector3D::<f32>::new(x as f32, y as f32, 1.0);
+            let new_point = transformed.transform_point(point);
+            self.plot(new_point.x() as i32, new_point.y() as i32, *pixel);
         }
     }
 }

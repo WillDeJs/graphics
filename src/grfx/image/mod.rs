@@ -7,4 +7,4 @@
 //!
 #[macro_use]
 pub mod macros;
-pub mod png;
+pub mod imageutils;pub mod png;

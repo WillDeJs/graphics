@@ -19,6 +19,7 @@ pub const YELLOW: Color = Color(255, 255, 0, 255);
 pub const MAGENTA: Color = Color(255, 0, 255, 255);
 pub const CYAN: Color = Color(0, 255, 255, 255);
 pub const GRAY: Color = Color(127, 127, 127, 255);
+pub const TRANSPARENT: Color = Color(255, 255, 255, 0);
 
 impl Color {
     /// Create a new color

@@ -125,6 +125,8 @@ pub const IHDR_TYPE: &[u8; 4] = b"IHDR";
 pub const PLTE_TYPE: &[u8; 4] = b"PLTE";
 pub const IDAT_TYPE: &[u8; 4] = b"IDAT";
 pub const IEND_TYPE: &[u8; 4] = b"IEND";
+#[allow(non_upper_case_globals)]
+pub const tRNS_TYPE: &[u8; 4] = b"tRNS";
 
 #[allow(non_upper_case_globals)]
 pub const gAMA_TYPE: &[u8; 4] = b"gAMA";
@@ -135,36 +137,42 @@ pub const gAMA_TYPE: &[u8; 4] = b"gAMA";
 ///   Green: 1 byte (0 = black, 255 = green)
 ///  Blue:  1 byte (0 = black, 255 = blue)
 /// The number of entries is determined from the chunk length. A chunk length not divisible by 3 is an error.
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct PLTE {
-    colors: Vec<Color>,
+    colors: [Color; 256],
 }
 
-impl TryFrom<Chunk> for PLTE {
+impl TryFrom<&Chunk> for PLTE {
     type Error = PNGError;
-    fn try_from(chunk: Chunk) -> Result<PLTE, Self::Error> {
-        let colors = chunk.data;
-        if colors.len() % 3 != 0 {
-            // legnth must be divisible by 3
-            Err(PNGError::ParssingError(
-                "Invalid length for PLTE chunk".into(),
-            ))
-        } else {
-            let mut pixels = Vec::<Color>::with_capacity(colors.len() / 3);
-            for color_chunk in colors[..].chunks_exact(3) {
-                let color = Color::from_slice(color_chunk);
-                pixels.push(color);
-            }
-            // Just in case some images have invalid indexes
-            // lets avoid crashes by making sure all allowed indexes are covered.
-            for _ in 0..256 - pixels.len() {
-                pixels.push(color::BLACK);
-            }
-            Ok(Self { colors: pixels })
+    fn try_from(chunk: &Chunk) -> Result<PLTE, Self::Error> {
+        let mut colors: [Color; 256] = [color::BLACK; 256];
+        for (i, color_chunk) in chunk.data[..].chunks_exact(3).enumerate() {
+            let color = Color::from_slice(&color_chunk[..]);
+            colors[i] = color;
         }
+        Ok(Self { colors })
     }
 }
 
+#[derive(Debug, Clone)]
+#[allow(non_camel_case_types)]
+pub struct tRNS {
+    transparency: [u8; 256],
+}
+impl From<&Chunk> for tRNS {
+    fn from(chunk: &Chunk) -> tRNS {
+        let mut alphas: [u8; 256] = [255; 256];
+        let data = &chunk.data;
+        for i in 0..data.len() {
+            if i < 256 {
+                alphas[i] = data[i];
+            }
+        }
+        tRNS {
+            transparency: alphas,
+        }
+    }
+}
 /// The IDAT (IMAGE DATA) chunck contains the actual image data.
 #[derive(Default, Debug, Clone)]
 struct IDAT {
@@ -182,175 +190,11 @@ pub struct IEND {}
 /// A PNG Image struct that contains a signature and a list of chunks
 #[derive(Default, Debug, Clone)]
 pub struct PNGImage {
-    signature: Signature,
     header: IHDR,
     plte: Option<PLTE>,
-    chunks: Vec<Chunk>,
+    idat: Vec<u8>,
+    trns: Option<tRNS>,
 }
-
-/// Different allowed filter type
-#[derive(Debug, Copy, Clone)]
-pub enum FilterType {
-    None = 0,
-    Sub = 1,
-    Up = 2,
-    Average = 3,
-    Paeth = 4,
-    Unsupported,
-}
-
-impl From<u8> for FilterType {
-    fn from(val: u8) -> FilterType {
-        match val {
-            0 => FilterType::None,
-            1 => FilterType::Sub,
-            2 => FilterType::Up,
-            3 => FilterType::Average,
-            4 => FilterType::Paeth,
-            _ => FilterType::Unsupported,
-        }
-    }
-}
-/// Generic Error type for errors related parsing images
-#[derive(Debug)]
-pub enum PNGError {
-    FileError(String),
-    DataError(String),
-    ParssingError(String),
-}
-
-impl Error for PNGError {}
-impl fmt::Display for PNGError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PNGError::ParssingError(_) => {
-                write!(f, "PNG Error: Could not parse image.")
-            }
-            PNGError::DataError(_) => {
-                write!(f, "Invalid data length extraction.")
-            }
-            _ => write!(f, "PNG Error: Error reading file."),
-        }
-    }
-}
-
-/******************************************************
- *          Decoding Chunk
- ******************************************************/
-
-/// Chunk decoder to ease decoding a single chunk at the time using iterators
-#[derive(Debug, Clone)]
-struct ChunkDecoder {
-    start: usize,
-    data: Vec<u8>,
-}
-
-impl ChunkDecoder {
-    /// Initialize the chunk decoder with a vector of bytes (usually from a file)
-    pub fn from_data(data: Vec<u8>) -> Self {
-        Self { start: 0, data }
-    }
-
-    /// extracts a given number of bytes from the decoder
-    /// Returns them as an optional
-    pub fn extract_bytes(&mut self, length: usize) -> Option<&[u8]> {
-        let mut value = None;
-        if length + self.start <= self.data.len() {
-            value = Some(&self.data[self.start..self.start + length]);
-            self.start += length;
-        }
-        return value;
-    }
-}
-
-/// Allow calling an interator on the ChunkDecodor to get each chunk
-impl Iterator for ChunkDecoder {
-    type Item = Chunk;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.start < self.data.len() {
-            let length_bytes = self.extract_bytes(SZ_CHUNK_LENGTH)?;
-            let length = be_bytes_to_u32(length_bytes.try_into().ok()?);
-            let c_type: [u8; SZ_CHUNK_COLOR_TYPE] =
-                self.extract_bytes(SZ_CHUNK_COLOR_TYPE)?.try_into().ok()?;
-            let data: Vec<u8> = self.extract_bytes(length as usize)?.try_into().ok()?;
-            let crc: [u8; SZ_CHUNK_CRC] = self.extract_bytes(SZ_CHUNK_CRC)?.try_into().ok()?;
-            Some(Chunk {
-                length,
-                c_type,
-                data,
-                crc,
-            })
-        } else {
-            None
-        }
-    }
-}
-
-/******************************************************
- *          Decoding rows
- ******************************************************/
-
-/// Chunk decoder to ease decoding a single chunk at the time using iterators
-#[derive(Debug, Clone)]
-#[allow(unused_variables, dead_code)]
-struct RowDecoder {
-    row_len: usize,
-    start: usize,
-    data: Vec<u8>,
-    bpp: usize,
-    previous_row: Vec<u8>,
-}
-
-impl RowDecoder {
-    /// Initialize the filter  decoder with a vector of bytes (usually from a file)
-    pub fn new(data: Vec<u8>, row_len: usize, bpp: usize) -> Self {
-        Self {
-            row_len,
-            start: 0,
-            data,
-            bpp, // bytes per pixel
-            previous_row: vec![0; row_len],
-        }
-    }
-
-    /// extracts a given number of bytes from the decoder
-    /// Returns them as an optional
-    pub fn extract_bytes(&mut self, length: usize) -> Option<&[u8]> {
-        let mut value = None;
-        if length + self.start <= self.data.len() {
-            value = Some(&self.data[self.start..self.start + length]);
-            self.start += length;
-        }
-        return value;
-    }
-}
-/// Allow calling an interator on the ChunkDecodor to get each chunk
-impl Iterator for RowDecoder {
-    type Item = Result<Vec<u8>, PNGError>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.start < self.data.len() {
-            let row_length = self.row_len;
-            let filter_type = self.extract_bytes(1)?[0];
-            let mut current_row = self.extract_bytes(row_length)?.iter().map(|e| *e).collect();
-            let previous_row = self.previous_row.clone();
-            let error = remove_filter(
-                &mut current_row,
-                &previous_row,
-                FilterType::from(filter_type),
-                self.bpp,
-            );
-
-            if error.is_err() {
-                return Some(Err(error.unwrap_err()));
-            }
-            self.previous_row = current_row.clone();
-            Some(Ok(current_row))
-        } else {
-            None
-        }
-    }
-}
-
 /******************************************************
  *          Decoding PNG Image itself
  ******************************************************/
@@ -360,8 +204,7 @@ impl Iterator for RowDecoder {
 ///
 /// Example usage:
 ///    let image = PNGImage::from_file("example.png");
-///    let signature = image.signature();
-///    let size  : (u32, u32) = image.size();
+///    let pixels : Vec<Color> = image.pixels()
 ///
 ///  To display an image take a look at renders, View2D struct;
 ///
@@ -374,15 +217,13 @@ impl PNGImage {
     pub fn from_file(file: &str) -> Result<Self, Box<dyn Error>> {
         let mut image_file = File::open(file)?;
         let mut data = Vec::<u8>::new();
+        let mut idat = Vec::<u8>::new();
         let mut signature = [0 as u8; SZ_SIGNATURE];
         let critical_chunks = vec![IHDR_TYPE, IDAT_TYPE, IEND_TYPE];
-        let mut message = String::from("Unknown error encountered");
-        let mut error_found = false;
-        let mut header_found = false;
-        let mut idat_found = false;
+        let mut message: String = "".into();
         let mut iend_found = false;
-        let mut has_plte = false;
         let mut plte: Option<PLTE> = None;
+        let mut trns: Option<tRNS> = None;
         let mut header = IHDR::default();
 
         image_file.read_exact(&mut signature)?;
@@ -392,53 +233,29 @@ impl PNGImage {
                 "Invalid PNG signature encountered".into(),
             )));
         }
-        let signature = Signature { signature };
-        let _ = image_file.read_to_end(&mut data)?;
+        image_file.read_to_end(&mut data)?;
 
-        let decoder = ChunkDecoder::from_data(data);
+        for chunk in ChunkDecoder::from_data(&data) {
+            if chunk.c_type == *IDAT_TYPE {
+                idat.extend_from_slice(&chunk.data[..]);
+            } else if chunk.c_type == *PLTE_TYPE {
+                plte = Some(PLTE::try_from(&chunk)?);
+            } else if chunk.c_type == *tRNS_TYPE {
+                trns = Some(tRNS::from(&chunk));
+            } else if chunk.c_type == *IHDR_TYPE {
+                header = parse_ihdr_data(&chunk.data)?;
+            } else if chunk.c_type == *IEND_TYPE {
+                iend_found = true;
+            }
+            if critical_chunks.contains(&&chunk.c_type) {
+                if !chunk.crc_okay() {
+                    message = format!("Invalid CRC check for CHUNK: '{:?}'.", chunk.c_type);
+                    return Err(Box::new(PNGError::ParssingError(message)));
+                }
+            }
+        }
 
-        // Ignore chunks that don't have valid CRC
-        // If critical chunk CRC fails, error
-        let chunks: Vec<Chunk> = decoder
-            .filter(|chunk| {
-                if chunk.c_type == *IDAT_TYPE {
-                    idat_found = true;
-                }
-                if chunk.c_type == *PLTE_TYPE {
-                    has_plte = true;
-                    let temp = PLTE::try_from(chunk.clone());
-                    if temp.is_err() {
-                        error_found = true;
-                        message = "Error parsing PLTE chunk".to_string();
-                    } else {
-                        plte = Some(temp.unwrap());
-                    }
-                } else if chunk.c_type == *IHDR_TYPE {
-                    let temp = parse_ihdr_data(&chunk.data);
-                    if temp.is_err() {
-                        message = String::from("Invalid IHDR data");
-                    } else {
-                        header_found = true;
-                        header = temp.unwrap();
-                    }
-                } else if chunk.c_type == *IEND_TYPE {
-                    iend_found = true;
-                }
-                if critical_chunks.contains(&&chunk.c_type) {
-                    if !chunk.crc_okay() {
-                        message = format!("Invalid CRC check for CHUNK: '{:?}'.", chunk.c_type);
-                        error_found = true;
-                        false
-                    } else {
-                        true
-                    }
-                } else {
-                    chunk.crc_okay()
-                }
-            })
-            .collect();
-
-        if error_found || !header_found || !idat_found || !iend_found {
+        if !iend_found {
             return Err(Box::new(PNGError::ParssingError(message)));
         }
 
@@ -451,9 +268,9 @@ impl PNGImage {
         }
         Ok(Self {
             header,
+            trns,
+            idat,
             plte,
-            signature,
-            chunks,
         })
     }
 
@@ -487,27 +304,17 @@ impl PNGImage {
             RGB_ALPHA_CTYPE => 4,
             _ => 1,
         };
-
         return channels * (self.header.bit_depth as usize) * (self.width() as usize) / 8;
     }
 
     /// Collect all the image data on the image and return it as a vector
     pub fn image_data(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut idat_vec = Vec::<u8>::new();
-        self.chunks
-            .iter()
-            .filter(|chunk| chunk.c_type == *IDAT_TYPE)
-            .for_each(|chunk| {
-                idat_vec.extend_from_slice(&chunk.data[..]);
-            });
-
-        let decompressed: Vec<u8> = gz::inflate_idat(&idat_vec)?;
-        println!("Decompressed: {}", decompressed.len());
+        let decompressed: Vec<u8> = gz::inflate_idat(&self.idat)?;
         let bpp = self.bytes_per_pixel();
         let row_len = self.row_length();
 
         let mut unfiltered = Vec::<u8>::with_capacity(row_len * self.height() as usize);
-        let filter_decoder = RowDecoder::new(decompressed, row_len, bpp);
+        let filter_decoder = RowDecoder::new(&decompressed, row_len, bpp);
         for row in filter_decoder {
             unfiltered.extend_from_slice(&row?[..]);
         }
@@ -515,7 +322,7 @@ impl PNGImage {
         Ok(unfiltered)
     }
 
-    pub fn image_pixels(&self) -> Result<Vec<Color>, Box<dyn Error>> {
+    pub fn pixels(&self) -> Result<Vec<Color>, Box<dyn Error>> {
         let mut pixels = Vec::<Color>::with_capacity((self.width() * self.height()) as usize);
         let image_data = self.image_data()?;
         match self.header.color_type {
@@ -664,11 +471,7 @@ impl PNGImage {
                     8 => {
                         for chunk in image_data[..].chunks_exact(4) {
                             let color = Color::from_slice(&chunk[..]);
-                            if color.alpha() == 0 {
-                                pixels.push(color::WHITE);
-                            } else {
-                                pixels.push(color)
-                            }
+                            pixels.push(color);
                         }
                     }
                     16 => {
@@ -693,6 +496,168 @@ impl PNGImage {
         };
 
         Ok(pixels)
+    }
+}
+/// Different allowed filter type
+#[derive(Debug, Copy, Clone)]
+pub enum FilterType {
+    None = 0,
+    Sub = 1,
+    Up = 2,
+    Average = 3,
+    Paeth = 4,
+    Unsupported,
+}
+
+impl From<u8> for FilterType {
+    fn from(val: u8) -> FilterType {
+        match val {
+            0 => FilterType::None,
+            1 => FilterType::Sub,
+            2 => FilterType::Up,
+            3 => FilterType::Average,
+            4 => FilterType::Paeth,
+            _ => FilterType::Unsupported,
+        }
+    }
+}
+/// Generic Error type for errors related parsing images
+#[derive(Debug)]
+pub enum PNGError {
+    FileError(String),
+    DataError(String),
+    ParssingError(String),
+}
+
+impl Error for PNGError {}
+impl fmt::Display for PNGError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PNGError::ParssingError(_) => {
+                write!(f, "PNG Error: Could not parse image.")
+            }
+            PNGError::DataError(_) => {
+                write!(f, "Invalid data length extraction.")
+            }
+            _ => write!(f, "PNG Error: Error reading file."),
+        }
+    }
+}
+
+/******************************************************
+ *          Decoding Chunk
+ ******************************************************/
+
+/// Chunk decoder to ease decoding a single chunk at the time using iterators
+#[derive(Debug, Clone)]
+struct ChunkDecoder<'a> {
+    start: usize,
+    data: &'a Vec<u8>,
+}
+
+impl<'a> ChunkDecoder<'a> {
+    /// Initialize the chunk decoder with a vector of bytes (usually from a file)
+    pub fn from_data(data: &'a Vec<u8>) -> Self {
+        Self { start: 0, data }
+    }
+
+    /// extracts a given number of bytes from the decoder
+    /// Returns them as an optional
+    pub fn extract_bytes(&mut self, length: usize) -> Option<&[u8]> {
+        let mut value = None;
+        if length + self.start <= self.data.len() {
+            value = Some(&self.data[self.start..self.start + length]);
+            self.start += length;
+        }
+        return value;
+    }
+}
+
+/// Allow calling an interator on the ChunkDecodor to get each chunk
+impl<'a> Iterator for ChunkDecoder<'a> {
+    type Item = Chunk;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start < self.data.len() {
+            let length_bytes = self.extract_bytes(SZ_CHUNK_LENGTH)?;
+            let length = be_bytes_to_u32(length_bytes.try_into().ok()?);
+            let c_type: [u8; SZ_CHUNK_COLOR_TYPE] =
+                self.extract_bytes(SZ_CHUNK_COLOR_TYPE)?.try_into().ok()?;
+            let data: Vec<u8> = self.extract_bytes(length as usize)?.try_into().ok()?;
+            let crc: [u8; SZ_CHUNK_CRC] = self.extract_bytes(SZ_CHUNK_CRC)?.try_into().ok()?;
+            Some(Chunk {
+                length,
+                c_type,
+                data,
+                crc,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/******************************************************
+ *          Decoding rows
+ ******************************************************/
+
+/// Chunk decoder to ease decoding a single chunk at the time using iterators
+#[derive(Debug, Clone)]
+#[allow(unused_variables, dead_code)]
+struct RowDecoder<'a> {
+    row_len: usize,
+    start: usize,
+    data: &'a Vec<u8>,
+    bpp: usize,
+    previous_row: Vec<u8>,
+}
+
+impl<'a> RowDecoder<'a> {
+    /// Initialize the filter  decoder with a vector of bytes (usually from a file)
+    pub fn new(data: &'a Vec<u8>, row_len: usize, bpp: usize) -> Self {
+        Self {
+            row_len,
+            start: 0,
+            data,
+            bpp, // bytes per pixel
+            previous_row: vec![0; row_len],
+        }
+    }
+
+    /// extracts a given number of bytes from the decoder
+    /// Returns them as an optional
+    pub fn extract_bytes(&mut self, length: usize) -> Option<&[u8]> {
+        let mut value = None;
+        if length + self.start <= self.data.len() {
+            value = Some(&self.data[self.start..self.start + length]);
+            self.start += length;
+        }
+        return value;
+    }
+}
+/// Allow calling an interator on the ChunkDecodor to get each chunk
+impl<'a> Iterator for RowDecoder<'a> {
+    type Item = Result<Vec<u8>, PNGError>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start < self.data.len() {
+            let row_length = self.row_len;
+            let filter_type = self.extract_bytes(1)?[0];
+            let mut current_row = self.extract_bytes(row_length)?.iter().map(|e| *e).collect();
+            let previous_row = &self.previous_row;
+            let error = remove_filter(
+                &mut current_row,
+                &previous_row,
+                FilterType::from(filter_type),
+                self.bpp,
+            );
+
+            if error.is_err() {
+                return Some(Err(error.unwrap_err()));
+            }
+            self.previous_row = current_row.clone();
+            Some(Ok(current_row))
+        } else {
+            None
+        }
     }
 }
 
@@ -862,10 +827,12 @@ fn valid_bit_depth(color_type: u8, value: u8) -> bool {
 /// https://www.w3.org/TR/REC-png-961001#R.Filtering
 ///
 /// Naturally we error if an unknown filter is given.
+/// We are doing the filtering by a stream thus we need to pass the current row being evaluated
+///         the previous row evaluated
+///         the filter type
+///         the number of bits per pixel
+///         returns the unfiltered image data.
 ///
-///     data -> Vector of bytes containing all the decompressed picture data
-///  
-///     Return the unfiltered image data.
 #[allow(dead_code, unused_variables)]
 fn remove_filter(
     current_row: &mut Vec<u8>,
