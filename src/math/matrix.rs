@@ -64,17 +64,17 @@ where
         return result;
     }
     /// create a rotate matrix with the given x and y transform values
-    pub fn rotate(alpha: f32) -> Self
+    pub fn rotate(alpha: f32) -> Mat3x3<f32>
     where
         T: Zero<Type = T> + Unit<Type = T> + LossyCast<f32> + Neg<Output = T>,
         f32: LossyCast<T>,
     {
-        let mut result = Self::identity();
-        result.inner[0][0] = alpha.cos().cast();
-        result.inner[0][1] = -alpha.sin().cast();
+        let mut result = Mat3x3::<f32>::identity();
+        result.inner[0][0] = alpha.cos();
+        result.inner[0][1] = -alpha.sin();
 
-        result.inner[1][0] = alpha.sin().cast();
-        result.inner[1][1] = alpha.cos().cast();
+        result.inner[1][0] = alpha.sin();
+        result.inner[1][1] = alpha.cos();
         return result;
     }
 

@@ -120,9 +120,6 @@ pub trait Render2D {
                     start = std::time::Instant::now();
                 }
                 window.request_redraw();
-                if *control_flow != ControlFlow::Exit {
-                    *control_flow = ControlFlow::Wait;
-                }
             });
         } else {
             println!("Could no start application. Setup did not complete successfully");

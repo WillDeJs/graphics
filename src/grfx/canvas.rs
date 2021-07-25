@@ -1,9 +1,10 @@
 use crate::grfx::color;
 use crate::grfx::color::Color;
 use crate::grfx::image::imageutils::Sprite;
+use crate::math;
+use crate::math::Fvec3D;
 use crate::math::Mat3x3;
 use crate::math::Point2D;
-use crate::math::Vector3D;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Transform {
@@ -501,6 +502,10 @@ impl Canvas {
     pub fn transform_sprite(&mut self, tile: &Sprite, transformer: &Transformer) {
         let mut transformed = Mat3x3::<f32>::identity();
 
+        // Calculate all transforms, notice they are stored in reversed order since
+        // the transform first added to the list will be the last operation
+        // transforms are combined by multiplying their transform matrixes
+        // the transformed there will contain the result of all matrix multiplications
         for transform in transformer.all() {
             transformed = transformed
                 * match transform {
@@ -509,13 +514,67 @@ impl Canvas {
                     Transform::Translate(cx, cy) => Mat3x3::<f32>::translate(cx, cy),
                 };
         }
-        for (i, pixel) in tile.pixels.iter().enumerate() {
-            let x = (i % tile.width) as i32;
-            let y = (i / tile.width) as i32;
+        let inversed_transformed = transformed.inverse();
 
-            let point = Vector3D::<f32>::new(x as f32, y as f32, 1.0);
-            let new_point = transformed.transform_point(point);
-            self.plot(new_point.x() as i32, new_point.y() as i32, *pixel);
+        // get corners of untransformed sprite
+        // I could use Vec2D here since the z component is 1.0 but being able to not skipp a dimension
+        // and use a 3D Vector with a 3x3 matrix just makes the concept more understandable
+        let tl_corner = Fvec3D::new(0.0, 0.0, 1.0); // top left corner
+        let tr_corner = Fvec3D::new(tile.width as f32, 0.0, 1.0); // top right corner
+        let br_corner = Fvec3D::new(tile.width as f32, tile.height as f32, 1.0); // right bottom corner
+        let bl_corner = Fvec3D::new(0.0, tile.height as f32, 1.0); // left bottom corner
+
+        // get corners of transformed sprite
+        let tl_transformed = transformed.transform_point(tl_corner);
+        let tr_transformed = transformed.transform_point(tr_corner);
+        let bl_transformed = transformed.transform_point(bl_corner);
+        let br_transformed = transformed.transform_point(br_corner);
+
+        // get bounding box coordinates of transformed box
+
+        let mut sx = math::min(tl_transformed.x(), br_transformed.x());
+        let mut sy = math::min(tl_transformed.y(), br_transformed.y());
+
+        let mut ex = math::max(tl_transformed.x(), br_transformed.x());
+        let mut ey = math::max(tl_transformed.y(), br_transformed.y());
+
+        ex = math::max(ex, bl_transformed.x());
+        ey = math::max(ey, bl_transformed.y());
+        sx = math::min(sx, bl_transformed.x());
+        sy = math::min(sy, bl_transformed.y());
+
+        ex = math::max(ex, tr_transformed.x());
+        ey = math::max(ey, tr_transformed.y());
+        sx = math::min(sx, tr_transformed.x());
+        sy = math::min(sy, tr_transformed.y());
+
+        // the ex, ey, sx, sy represent the bounding box of the transformed sprite
+        // we work it out now so that later we could use the inverse of the transform
+        // in order to retrieve the original x,y pixel locations and sample the color
+        // at the origina x,y location and thus we don't skip any pixels removing the annoying
+        // empty blank spaces resulting from resizing and rotating
+
+        for x in sx as usize..ex as usize {
+            for y in sy as usize..ey as usize {
+                let new_point =
+                    inversed_transformed.transform_point(Fvec3D::new(x as f32, y as f32, 1.0));
+                if let Some(pixel) = tile.get_pixel(
+                    (new_point.x() + 0.5) as usize,
+                    (new_point.y() + 0.5) as usize,
+                ) {
+                    self.plot(x as i32, y as i32, pixel);
+                }
+            }
         }
+
+        // Oritinal transform which results in empty blank spaces when scaling and rotating
+        // for (i, pixel) in tile.pixels.iter().enumerate() {
+        //     let x = (i % tile.width) as i32;
+        //     let y = (i / tile.width) as i32;
+
+        //     let point = Fvec3D::new(x as f32, y as f32, 1.0);
+        //     let new_point = transformed.transform_point(point);
+        //     self.plot(new_point.x() as i32, new_point.y() as i32, *pixel);
+        // }
     }
 }

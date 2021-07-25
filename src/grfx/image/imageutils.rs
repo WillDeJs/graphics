@@ -10,6 +10,17 @@ pub struct Sprite {
     pub pixels: Vec<Color>,
 }
 
+impl Sprite {
+    pub fn get_pixel(&self, x: usize, y: usize) -> Option<Color> {
+        if x >= self.width || y >= self.height {
+            None
+        } else {
+            let normalized_position = y * self.width + x;
+            Some(self.pixels[normalized_position])
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct SpriteSize {
     pub width: usize,

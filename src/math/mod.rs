@@ -33,6 +33,29 @@ pub type Ivec3D = crate::math::vector::Vector3D<i32>;
 
 pub type FMat3 = crate::math::matrix::Mat3x3<f32>;
 
+/// Determine the minimum among two numbers a and b
+pub fn min<T>(a: T, b: T) -> T
+where
+    T: SimpleMathTrait + PartialEq + PartialOrd,
+{
+    if a > b {
+        b
+    } else {
+        a
+    }
+}
+
+/// Determine the maximum among two numbers a and b
+pub fn max<T>(a: T, b: T) -> T
+where
+    T: SimpleMathTrait + PartialEq + PartialOrd,
+{
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
 /// Inner trait to implement all operations required for generic vector types.
 ///  Restricts operations to only implemented primitive types
 #[doc(hidden)]
