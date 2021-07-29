@@ -16,7 +16,10 @@ impl Sprite {
             None
         } else {
             let normalized_position = y * self.width + x;
-            Some(self.pixels[normalized_position])
+            match self.pixels.get(normalized_position) {
+                Some(&color) => Some(color),
+                None => None,
+            }
         }
     }
 }
@@ -121,35 +124,18 @@ impl SpriteExtractor {
 impl Iterator for SpriteExtractor {
     type Item = Sprite;
     fn next(&mut self) -> Option<Self::Item> {
-        let mut pixels =
-            Vec::<Color>::with_capacity((self.tile_size.width * self.tile_size.height) as usize);
-        if self.start.x() as usize + self.tile_size.width < self.image_width
-            && self.start.y() as usize + self.tile_size.height < self.image_height
-        {
-            for i in 0..self.tile_size.height {
-                if let Some(colors) = self.extract_pixels(
-                    self.start.x() as usize,
-                    self.start.y() as usize + i,
-                    self.tile_size.width,
-                ) {
-                    pixels.extend_from_slice(colors);
-                }
-            }
-            if self.start.x() as usize + self.separation < self.image_width {
-                self.start = Point2D::new(
-                    self.start.x() + (self.separation + self.tile_size.width) as i32,
-                    self.start.y(),
-                );
-            } else {
-                self.start = Point2D::new(self.start.x() + 1, 0);
-            }
-            Some(Sprite {
-                width: self.tile_size.width,
-                height: self.tile_size.height,
-                pixels,
-            })
+        let sprite = self.extract_sprite(self.start, self.tile_size.clone());
+        if self.start.x() as usize + self.separation + 2 * self.tile_size.width < self.image_width {
+            self.start = Point2D::new(
+                self.start.x() + (self.separation + self.tile_size.width) as i32,
+                self.start.y(),
+            );
         } else {
-            None
+            self.start = Point2D::new(
+                0,
+                self.start.y() + self.tile_size.height as i32 + self.separation as i32,
+            );
         }
+        sprite
     }
 }

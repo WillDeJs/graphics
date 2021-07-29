@@ -1,10 +1,19 @@
 use crate::grfx::color;
 use crate::grfx::color::Color;
 use crate::grfx::image::imageutils::Sprite;
+use crate::grfx::image::imageutils::SpriteExtractor;
+use crate::grfx::image::imageutils::SpriteSize;
+use crate::grfx::image::png::PNGImage;
 use crate::math;
+use crate::math::FVec2D;
 use crate::math::Fvec3D;
 use crate::math::Mat3x3;
 use crate::math::Point2D;
+use std::collections::HashMap;
+
+/// Font letters and symbols.
+const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
+static mut FONT_SYMBOLS: Option<HashMap<char, Sprite>> = None;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Transform {
@@ -58,7 +67,7 @@ impl Canvas {
         for _ in 0..pixels.capacity() {
             pixels.push(color::BLACK); // initialize to black pixels;
         }
-
+        read_font(); // load font into memory
         Self {
             width,
             height,
@@ -500,6 +509,15 @@ impl Canvas {
         }
     }
     pub fn transform_sprite(&mut self, tile: &Sprite, transformer: &Transformer) {
+        self.transform_sprite_colored(tile, transformer, None);
+    }
+
+    pub fn transform_sprite_colored(
+        &mut self,
+        tile: &Sprite,
+        transformer: &Transformer,
+        color: Option<Color>,
+    ) {
         let mut transformed = Mat3x3::<f32>::identity();
 
         // Calculate all transforms, notice they are stored in reversed order since
@@ -548,12 +566,6 @@ impl Canvas {
         sx = math::min(sx, tr_transformed.x());
         sy = math::min(sy, tr_transformed.y());
 
-        // the ex, ey, sx, sy represent the bounding box of the transformed sprite
-        // we work it out now so that later we could use the inverse of the transform
-        // in order to retrieve the original x,y pixel locations and sample the color
-        // at the origina x,y location and thus we don't skip any pixels removing the annoying
-        // empty blank spaces resulting from resizing and rotating
-
         for x in sx as usize..ex as usize {
             for y in sy as usize..ey as usize {
                 let new_point =
@@ -562,19 +574,68 @@ impl Canvas {
                     (new_point.x() + 0.5) as usize,
                     (new_point.y() + 0.5) as usize,
                 ) {
-                    self.plot(x as i32, y as i32, pixel);
+                    if let Some(override_color) = color {
+                        if pixel.alpha() != 0 {
+                            self.plot(x as i32, y as i32, override_color);
+                        }
+                    } else {
+                        self.plot(x as i32, y as i32, pixel);
+                    }
+                }
+            }
+            // Oritinal transform which results in empty blank spaces when scaling and rotating
+            // for (i, pixel) in tile.pixels.iter().enumerate() {
+            //     let x = (i % tile.width) as i32;
+            //     let y = (i / tile.width) as i32;
+            //     let point = Fvec3D::new(x as f32, y as f32, 1.0);
+            //     let new_point = transformed.transform_point(point);
+            //     self.plot(new_point.x() as i32, new_point.y() as i32, *pixel);
+            // }
+        }
+    }
+
+    pub fn draw_string(&mut self, origin: Point2D, msg: String, size: f32, color: Color) {
+        // FIX ME find away to do this without using unsafe
+        unsafe {
+            if let Some(font) = &FONT_SYMBOLS {
+                // fix me don't hardcode font size
+                let width = 5.0 * size;
+                let mut translate_point = origin.to_f32();
+                for character in msg.to_uppercase().chars() {
+                    if let Some(sprite) = font.get(&character) {
+                        let mut transformer = Transformer::new();
+                        transformer.add(Transform::Scale(size, size));
+                        transformer.add(Transform::Translate(
+                            translate_point.x(),
+                            translate_point.y(),
+                        ));
+                        self.transform_sprite_colored(&sprite, &transformer, Some(color));
+                    }
+                    translate_point = FVec2D::new(translate_point.x() + width, translate_point.y());
                 }
             }
         }
+    }
+}
 
-        // Oritinal transform which results in empty blank spaces when scaling and rotating
-        // for (i, pixel) in tile.pixels.iter().enumerate() {
-        //     let x = (i % tile.width) as i32;
-        //     let y = (i / tile.width) as i32;
+/// Helper readall fonts into statuc FONT_SYMBOLS for later usage.
+fn read_font() {
+    let mut map = HashMap::<char, Sprite>::new();
 
-        //     let point = Fvec3D::new(x as f32, y as f32, 1.0);
-        //     let new_point = transformed.transform_point(point);
-        //     self.plot(new_point.x() as i32, new_point.y() as i32, *pixel);
-        // }
+    unsafe {
+        FONT_SYMBOLS = match PNGImage::from_file("font.png") {
+            Ok(image) => {
+                let extractor =
+                    SpriteExtractor::from_png(&image, SpriteSize::new(5, 8), 1).unwrap();
+                let symbols: Vec<Sprite> = extractor.collect();
+                for (index, character) in FONT_LETTERS.chars().enumerate() {
+                    if symbols.len() > index {
+                        map.insert(character, symbols[index].clone());
+                    }
+                }
+                Some(map)
+            }
+            Err(_) => None,
+        }
     }
 }

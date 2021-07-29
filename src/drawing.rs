@@ -7,6 +7,7 @@ use crate::grfx::image::imageutils::SpriteSize;
 use crate::grfx::image::imageutils::*;
 use crate::grfx::image::png::PNGImage;
 pub use crate::grfx::render::Render2D;
+use crate::math::Point2D;
 use winit_input_helper::WinitInputHelper;
 
 pub struct Draw2D {
@@ -48,7 +49,6 @@ impl Render2D for Draw2D {
     ///
     fn setup(&mut self, _canvas: &mut Canvas) -> bool {
         let image = PNGImage::from_file("sample.png").unwrap();
-
         let extractor = SpriteExtractor::from_png(&image, SpriteSize::default(), 0).unwrap();
         self.tile = extractor.extract_whole();
         true
@@ -60,7 +60,12 @@ impl Render2D for Draw2D {
     fn update(&mut self, canvas: &mut Canvas, _input: &WinitInputHelper, _delta_t: f32) -> bool {
         // clear screen
         canvas.fill(color::Color::rgb(255, 217, 217));
-
+        canvas.draw_string(
+            Point2D::new(10, 10),
+            "Rotating Sample.png".into(),
+            1.20,
+            color::Color::rgb(231, 150, 0),
+        );
         let mut transformer = Transformer::new();
         //rotate center of sprite to origin, makes easier to rotate later on.
         transformer.add(Transform::Translate(
@@ -68,7 +73,7 @@ impl Render2D for Draw2D {
             (-(self.tile.height as i32) / 2) as f32,
         ));
         transformer.add(Transform::Rotate(self.angle));
-        transformer.add(Transform::Scale(0.3, 0.3)); // scale down at 30% of size
+        transformer.add(Transform::Scale(0.2, 0.2)); // scale down at 30% of size
         transformer.add(Transform::Translate(
             (self.width() / 2) as f32,
             (self.height() / 2) as f32,
