@@ -49,7 +49,7 @@ impl Render2D for Draw2D {
     ///
     fn setup(&mut self, _canvas: &mut Canvas) -> bool {
         let image = PNGImage::from_file("sample.png").unwrap();
-        let extractor = SpriteExtractor::from_png(&image, SpriteSize::default(), 0).unwrap();
+        let extractor = SpriteExtractor::from_png(&image, SpriteSize::default(), 0, 0).unwrap();
         self.tile = extractor.extract_whole();
         true
     }
@@ -63,7 +63,7 @@ impl Render2D for Draw2D {
         canvas.draw_string(
             Point2D::new(10, 10),
             "Rotating Sample.png".into(),
-            1.20,
+            0.20,
             color::Color::rgb(231, 150, 0),
         );
         let mut transformer = Transformer::new();

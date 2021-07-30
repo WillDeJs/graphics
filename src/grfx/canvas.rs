@@ -12,7 +12,8 @@ use crate::math::Point2D;
 use std::collections::HashMap;
 
 /// Font letters and symbols.
-const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
+// const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
+pub const FONT_LETTERS: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 static mut FONT_SYMBOLS: Option<HashMap<char, Sprite>> = None;
 
 #[derive(Debug, Copy, Clone)]
@@ -599,10 +600,11 @@ impl Canvas {
         unsafe {
             if let Some(font) = &FONT_SYMBOLS {
                 // fix me don't hardcode font size
-                let width = 5.0 * size;
+                let mut width = 0.0;
                 let mut translate_point = origin.to_f32();
-                for character in msg.to_uppercase().chars() {
+                for character in msg.chars() {
                     if let Some(sprite) = font.get(&character) {
+                        width = sprite.width as f32 * size;
                         let mut transformer = Transformer::new();
                         transformer.add(Transform::Scale(size, size));
                         transformer.add(Transform::Translate(
@@ -618,15 +620,15 @@ impl Canvas {
     }
 }
 
-/// Helper readall fonts into statuc FONT_SYMBOLS for later usage.
+/// Helper read all fonts into statuc FONT_SYMBOLS for later usage.
 fn read_font() {
     let mut map = HashMap::<char, Sprite>::new();
 
     unsafe {
-        FONT_SYMBOLS = match PNGImage::from_file("font.png") {
+        FONT_SYMBOLS = match PNGImage::from_file("font2.png") {
             Ok(image) => {
                 let extractor =
-                    SpriteExtractor::from_png(&image, SpriteSize::new(5, 8), 1).unwrap();
+                    SpriteExtractor::from_png(&image, SpriteSize::new(50, 85), 0, 15).unwrap();
                 let symbols: Vec<Sprite> = extractor.collect();
                 for (index, character) in FONT_LETTERS.chars().enumerate() {
                     if symbols.len() > index {
