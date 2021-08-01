@@ -8,5 +8,9 @@ Currently supported:
 - Drawing strings (using PNG sprites)
 
 Example image:
+```
+cargo run --example rotatingpng --release
+```
+Produces:
 <br>
 <img src="./Rotating PNG.gif">
