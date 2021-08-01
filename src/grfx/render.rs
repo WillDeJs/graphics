@@ -6,6 +6,8 @@ use std::time::Duration;
 use std::time::Instant;
 pub use winit_input_helper::WinitInputHelper;
 
+pub type InputHelper = WinitInputHelper;
+
 /// Render2D Trait which contains all the functions to:
 /// 1. Draw to the screen
 /// 2. Update objects on the screen
@@ -35,7 +37,7 @@ pub trait Render2D {
     /// Update method called when the canvas is to be updated
     /// This is called periodically per frame and each frame is drawn individually
     /// Must be overriden/implmented
-    fn update(&mut self, canvas: &mut Canvas, input: &WinitInputHelper, delta_t: f32) -> bool;
+    fn update(&mut self, canvas: &mut Canvas, input: &InputHelper, delta_t: f32) -> bool;
 
     fn render(mut self)
     where
@@ -64,7 +66,7 @@ pub trait Render2D {
         )
         .unwrap();
 
-        let mut input = winit_input_helper::WinitInputHelper::new();
+        let mut input = InputHelper::new();
         let mut last_frame_time = Instant::now();
         let mut next_frame_time = Instant::now();
         let mut frame_counter = 0.0;
@@ -112,7 +114,7 @@ pub trait Render2D {
                 let passed_time = Instant::now() - last_frame_time;
                 if passed_time > Duration::from_secs(1) {
                     display.gl_window().window().set_title(&format!(
-                        "{} - {}",
+                        "{} - {} FPS",
                         &title,
                         (frame_counter / passed_time.as_secs_f32()) as u32
                     ));

@@ -1,9 +1,9 @@
-use std::ops::Add;
-use std::ops::AddAssign;
-use std::ops::Div;
-use std::ops::Mul;
-use std::ops::Sub;
-use std::ops::SubAssign;
+pub use std::ops::Add;
+pub use std::ops::AddAssign;
+pub use std::ops::Div;
+pub use std::ops::Mul;
+pub use std::ops::Sub;
+pub use std::ops::SubAssign;
 
 /// RGB like color structure
 #[derive(Default, Debug, Copy, Clone, PartialEq)]

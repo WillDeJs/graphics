@@ -1,13 +1,18 @@
-use crate::grfx::canvas::Canvas;
-use crate::grfx::canvas::Transform;
-use crate::grfx::canvas::Transformer;
-use crate::grfx::color;
-use crate::grfx::image::imageutils::SpriteExtractor;
-use crate::grfx::image::imageutils::SpriteSize;
-use crate::grfx::image::imageutils::*;
-use crate::grfx::image::png::PNGImage;
-pub use crate::grfx::render::*;
-use crate::math::Point2D;
+use graphics::grfx::canvas::Canvas;
+use graphics::grfx::canvas::Transform;
+use graphics::grfx::canvas::Transformer;
+use graphics::grfx::color;
+use graphics::grfx::image::imageutils::SpriteExtractor;
+use graphics::grfx::image::imageutils::SpriteSize;
+use graphics::grfx::image::imageutils::*;
+use graphics::grfx::image::png::PNGImage;
+use graphics::grfx::render::*;
+use graphics::math::Point2D;
+
+fn main() {
+    let drawing_canvas = Draw2D::new(800, 600, "Tiles".into());
+    drawing_canvas.render();
+}
 
 pub struct Draw2D {
     width: u32,
