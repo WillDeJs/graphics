@@ -23,11 +23,20 @@ pub type InputHelper = WinitInputHelper;
 #[allow(dead_code, unused_variables)]
 pub trait Render2D {
     ///  Get window properties height
-    fn height(&mut self) -> u32;
+    ///  Defaults to 600, override to provide custom height
+    fn height(&mut self) -> u32 {
+        600
+    }
     /// Get wWindow properties width
-    fn width(&mut self) -> u32;
+    /// Defaults to 800, override to provide custom width
+    fn width(&mut self) -> u32 {
+        800
+    }
     /// Get wWindow properties title
-    fn title(&mut self) -> String;
+    /// Defaults to "Render2D Canvas", override to provide custom title
+    fn title(&mut self) -> String {
+        "Render2D Canvas".into()
+    }
     ///
     /// Setup method called when the world is first created
     /// Must be overriden.
@@ -49,7 +58,7 @@ pub trait Render2D {
         let mut canvas = Canvas::new(width, height);
         let event_loop = glium::glutin::event_loop::EventLoop::new();
         let inner_size = glium::glutin::dpi::LogicalSize::new(width, height);
-        let sixty_frames_per_sec = (1.0 / 60.0 * 10000000.0) as u64;
+        let frames_per_sec = ((1.0 / 60.0) * 1000000000.0) as u64; // 60 frames per second
         let wb = glium::glutin::window::WindowBuilder::new()
             .with_inner_size(inner_size)
             .with_title(&title[..])
@@ -97,7 +106,7 @@ pub trait Render2D {
                             .as_surface()
                             .fill(&target, glium::uniforms::MagnifySamplerFilter::Nearest);
                         target.finish().unwrap();
-                        next_frame_time += Duration::from_nanos(16_666_667);
+                        next_frame_time += Duration::from_nanos(frames_per_sec);
                         *control_flow = ControlFlow::WaitUntil(next_frame_time);
                     }
                     Event::WindowEvent { ref event, .. } => match event {
