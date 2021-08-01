@@ -9,19 +9,19 @@ use std::ops::SubAssign;
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Color(u8, u8, u8, u8);
 
-/// Handy color definitions
-pub const BLACK: Color = Color(0, 0, 0, 255);
-pub const BLUE: Color = Color(0, 0, 255, 255);
-pub const GREEN: Color = Color(0, 255, 0, 255);
-pub const RED: Color = Color(255, 0, 0, 255);
-pub const WHITE: Color = Color(255, 255, 255, 255);
-pub const YELLOW: Color = Color(255, 255, 0, 255);
-pub const MAGENTA: Color = Color(255, 0, 255, 255);
-pub const CYAN: Color = Color(0, 255, 255, 255);
-pub const GRAY: Color = Color(127, 127, 127, 255);
-pub const TRANSPARENT: Color = Color(255, 255, 255, 0);
-
 impl Color {
+    /// Handy color definitions
+    pub const BLACK: Color = Color(0, 0, 0, 255);
+    pub const BLUE: Color = Color(0, 0, 255, 255);
+    pub const GREEN: Color = Color(0, 255, 0, 255);
+    pub const RED: Color = Color(255, 0, 0, 255);
+    pub const WHITE: Color = Color(255, 255, 255, 255);
+    pub const YELLOW: Color = Color(255, 255, 0, 255);
+    pub const MAGENTA: Color = Color(255, 0, 255, 255);
+    pub const CYAN: Color = Color(0, 255, 255, 255);
+    pub const GRAY: Color = Color(127, 127, 127, 255);
+    pub const TRANSPARENT: Color = Color(255, 255, 255, 0);
+
     /// Create a new color
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self(r, g, b, 255)

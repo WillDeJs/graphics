@@ -1,4 +1,4 @@
-use crate::grfx::color::{self, Color};
+use crate::grfx::color::Color;
 use crate::utils::gz;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -145,7 +145,7 @@ pub struct PLTE {
 impl TryFrom<&Chunk> for PLTE {
     type Error = PNGError;
     fn try_from(chunk: &Chunk) -> Result<PLTE, Self::Error> {
-        let mut colors: [Color; 256] = [color::BLACK; 256];
+        let mut colors: [Color; 256] = [Color::BLACK; 256];
         for (i, color_chunk) in chunk.data[..].chunks_exact(3).enumerate() {
             let color = Color::from_slice(&color_chunk[..]);
             colors[i] = color;

@@ -1,4 +1,3 @@
-use crate::grfx::color;
 use crate::grfx::color::Color;
 use crate::grfx::image::imageutils::Sprite;
 use crate::grfx::image::imageutils::SpriteExtractor;
@@ -66,7 +65,7 @@ impl Canvas {
     pub fn new(width: u32, height: u32) -> Self {
         let mut pixels = Vec::with_capacity((width * height) as usize);
         for _ in 0..pixels.capacity() {
-            pixels.push(color::BLACK); // initialize to black pixels;
+            pixels.push(Color::BLACK); // initialize to black pixels;
         }
         read_font(); // load font into memory
         Self {
@@ -103,7 +102,9 @@ impl Canvas {
             return;
         }
         if x >= 0 && x < self.width as i32 && y >= 0 && y < self.height as i32 {
-            let normalized_position = (y * self.width as i32 + x) as usize;
+            // let normalized_position = (y * self.width as i32 + x) as usize;
+            // reverse y location  as glium texture starts bottom left as origing
+            let normalized_position = ((self.height as i32 - y) * self.width as i32 + x) as usize;
             if normalized_position < self.pixels.len() {
                 self.pixels[normalized_position] = color;
             }
@@ -338,7 +339,7 @@ impl Canvas {
             self.line_between(start, next, color);
             start = next;
         }
-        self.fill_circle(origin, 5, color::BLUE);
+        self.fill_circle(origin, 5, Color::BLUE);
     }
 
     ///
@@ -638,6 +639,20 @@ fn read_font() {
                 Some(map)
             }
             Err(_) => None,
+        }
+    }
+}
+
+impl<'a> glium::texture::Texture2dDataSource<'a> for &'a Canvas {
+    type Data = u8;
+    fn into_raw(self) -> glium::texture::RawImage2d<'a, Self::Data> {
+        glium::texture::RawImage2d {
+            data: std::borrow::Cow::Borrowed(unsafe {
+                std::slice::from_raw_parts(self.pixels.as_ptr() as *const u8, self.pixels.len() * 4)
+            }),
+            height: self.height,
+            width: self.width,
+            format: glium::texture::ClientFormat::U8U8U8U8,
         }
     }
 }

@@ -6,9 +6,8 @@ use crate::grfx::image::imageutils::SpriteExtractor;
 use crate::grfx::image::imageutils::SpriteSize;
 use crate::grfx::image::imageutils::*;
 use crate::grfx::image::png::PNGImage;
-pub use crate::grfx::render::Render2D;
+pub use crate::grfx::render::*;
 use crate::math::Point2D;
-use winit_input_helper::WinitInputHelper;
 
 pub struct Draw2D {
     width: u32,

@@ -1,14 +1,10 @@
 use crate::grfx::canvas::Canvas;
-use crate::grfx::color::Color;
-use pixels::{PixelsBuilder, SurfaceTexture};
+use glium::glutin::event::{Event, StartCause};
+use glium::glutin::event_loop::ControlFlow;
+use glium::Surface;
 use std::time::Duration;
 use std::time::Instant;
-use winit::dpi::LogicalSize;
-use winit::event::{Event, WindowEvent};
-use winit::event_loop::ControlFlow;
-use winit::event_loop::EventLoop;
-use winit::window::WindowBuilder;
-use winit_input_helper::WinitInputHelper;
+pub use winit_input_helper::WinitInputHelper;
 
 /// Render2D Trait which contains all the functions to:
 /// 1. Draw to the screen
@@ -47,135 +43,85 @@ pub trait Render2D {
     {
         let width = self.width();
         let height = self.height();
-
         let title = self.title();
+        let mut canvas = Canvas::new(width, height);
+        let event_loop = glium::glutin::event_loop::EventLoop::new();
+        let inner_size = glium::glutin::dpi::LogicalSize::new(width, height);
+        let sixty_frames_per_sec = (1.0 / 60.0 * 10000000.0) as u64;
+        let wb = glium::glutin::window::WindowBuilder::new()
+            .with_inner_size(inner_size)
+            .with_title(&title[..])
+            .with_resizable(false);
 
-        let event_loop = EventLoop::new();
-        let image_size = LogicalSize::new(width, height);
-        let window = WindowBuilder::new()
-            .with_inner_size(image_size)
-            .with_title(&title)
-            .with_resizable(false)
-            .with_transparent(true)
-            .build(&event_loop)
-            .unwrap();
-        // Keyboard/mouse input handler
-        let mut input = WinitInputHelper::new();
-        let mut canvas: Canvas = Canvas::new(width, height);
+        let cb = glium::glutin::ContextBuilder::new();
+        let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+        let texture = glium::Texture2d::empty_with_format(
+            &display,
+            glium::texture::UncompressedFloatFormat::U8U8U8U8,
+            glium::texture::MipmapsOption::EmptyMipmaps,
+            width,
+            height,
+        )
+        .unwrap();
 
-        // Initialize a surface
-        let surface_texture = SurfaceTexture::new(width, height, &window);
-
-        // pixesl which we use to draw on the screen
-        // let mut pixelbuffer = Pixels::new(self.width, self.height, surface_texture).unwrap();
-        let mut pixelbuffer = PixelsBuilder::new(width, height, surface_texture)
-            .enable_vsync(true)
-            .build()
-            .unwrap();
-
-        // a counter for counting FPS
-        let mut frame_counter: f64 = 0.0;
-        let mut start = Instant::now();
+        let mut input = winit_input_helper::WinitInputHelper::new();
+        let mut last_frame_time = Instant::now();
+        let mut next_frame_time = Instant::now();
+        let mut frame_counter = 0.0;
         let mut last_draw = Instant::now();
-
         if self.setup(&mut canvas) {
             event_loop.run(move |event, _, control_flow| {
-                // Handle events for closing screen and redrawing it
                 match event {
-                    Event::WindowEvent {
-                        event: WindowEvent::CloseRequested,
-                        window_id,
-                    } if window_id == window.id() => *control_flow = ControlFlow::Exit,
-                    Event::RedrawRequested(_windowid) => {
-                        frame_counter += 1.0;
-                        // Update the frame.
-                        let elapsed_time = Instant::now().duration_since(last_draw);
+                    Event::NewEvents(StartCause::Init)
+                    | Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
+                        let elapsed = Instant::now().duration_since(last_draw);
+                        if !self.update(&mut canvas, &input, elapsed.as_secs_f32()) {
+                            *control_flow = ControlFlow::Exit;
+                        }
                         last_draw = Instant::now();
-                        if !self.update(&mut canvas, &input, elapsed_time.as_secs_f32()) {
-                            *control_flow = ControlFlow::Exit;
-                        }
-                        draw_pixels(pixelbuffer.get_frame(), &canvas);
-                        // Paint pixels to screen
-                        if pixelbuffer.render().is_err() {
-                            *control_flow = ControlFlow::Exit;
-                        }
+                        frame_counter += 1.0;
+
+                        let target = display.draw();
+                        texture.write(
+                            glium::Rect {
+                                left: 0,
+                                bottom: 0,
+                                width,
+                                height,
+                            },
+                            &canvas,
+                        );
+                        texture
+                            .as_surface()
+                            .fill(&target, glium::uniforms::MagnifySamplerFilter::Nearest);
+                        target.finish().unwrap();
+                        next_frame_time += Duration::from_nanos(16_666_667);
+                        *control_flow = ControlFlow::WaitUntil(next_frame_time);
                     }
+                    Event::WindowEvent { ref event, .. } => match event {
+                        glium::glutin::event::WindowEvent::CloseRequested => {
+                            *control_flow = ControlFlow::Exit
+                        }
+
+                        _ => (),
+                    },
                     _ => (),
                 }
-                // Handle mouse input and Keyboard input
-                if input.update(&event) {}
-                // Update FPS on title screen (cuz why not?)
-                let end = std::time::Instant::now();
-                let time_from_last_update = end.duration_since(start);
+                input.update(&event);
 
-                // Update the title after some resoneable time passes (a few seconds)
-                if time_from_last_update > Duration::from_secs(1) {
-                    let new_title = format!(
-                        "{} - {} FPS",
-                        title,
-                        (frame_counter / time_from_last_update.as_secs() as f64) as u32
-                    );
+                let passed_time = Instant::now() - last_frame_time;
+                if passed_time > Duration::from_secs(1) {
+                    display.gl_window().window().set_title(&format!(
+                        "{} - {}",
+                        &title,
+                        (frame_counter / passed_time.as_secs_f32()) as u32
+                    ));
                     frame_counter = 0.0;
-                    window.set_title(&new_title);
-                    start = std::time::Instant::now();
+                    last_frame_time = Instant::now();
                 }
-                window.request_redraw();
             });
         } else {
-            println!("Could no start application. Setup did not complete successfully");
+            println!("Could not start rendering...");
         }
-    }
-
-    /// Static function to render pixels arbitrarily of existence of canvas or not
-    /// Simply give a height, width and pixel buffer with the right number of pixels.
-    ///
-    /// This is useful when rendering  things that are not necessarily drawn by us.
-    /// Example: png decoded data.__rust_force_expr!
-    ///
-    /// see grfx::image::png::PNGImage#pixels
-    fn render_pixels(width: u32, height: u32, pixels: Vec<Color>) {
-        let event_loop = EventLoop::new();
-        let image_size = LogicalSize::new(width, height);
-        let window = WindowBuilder::new()
-            .with_inner_size(image_size)
-            .with_title("Pixel Rendering")
-            .with_resizable(true)
-            .build(&event_loop)
-            .unwrap();
-
-        // Initialize a surface
-        let surface_texture = SurfaceTexture::new(width, height, &window);
-
-        // pixesl which we use to draw on the screen
-        // let mut pixelbuffer = Pixels::new(self.width, self.height, surface_texture).unwrap();
-        let mut pixelbuffer = PixelsBuilder::new(width, height, surface_texture)
-            .enable_vsync(true)
-            .build()
-            .unwrap();
-
-        // copy pixels to buffer to display them
-        for (i, chunk) in pixelbuffer.get_frame().chunks_exact_mut(4).enumerate() {
-            chunk.copy_from_slice(&pixels[i].as_bytes());
-        }
-        pixelbuffer.render().expect("Not able to render picture");
-
-        event_loop.run(move |event, _, control_flow| {
-            match event {
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    window_id,
-                } if window_id == window.id() => *control_flow = ControlFlow::Exit,
-                _ => (),
-            }
-            if *control_flow != ControlFlow::Exit {
-                *control_flow = ControlFlow::Wait;
-            }
-        });
-    }
-}
-// simply put pixels on the frame
-fn draw_pixels(frames: &mut [u8], canvas: &Canvas) {
-    for (i, pixel) in frames.chunks_exact_mut(4).enumerate() {
-        pixel.copy_from_slice(&canvas.pixels[i].as_bytes());
     }
 }
