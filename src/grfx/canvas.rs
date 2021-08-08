@@ -243,7 +243,7 @@ impl Canvas {
     /// Height
     /// Color for pixels
     ///
-    pub fn fill_rectangle(&mut self, origin: Point2D, width: i32, height: i32, color: Color) {
+    pub fn fill_rectangle(&mut self, origin: &Point2D, width: i32, height: i32, color: Color) {
         for i in 0..=height {
             let right = Point2D::new(origin.x, origin.y + i);
             let left = Point2D::new(origin.x + width, origin.y + i);

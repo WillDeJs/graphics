@@ -115,6 +115,23 @@ where
         let y: i32 = self.y.cast();
         Vector2D::<i32>::new(x, y)
     }
+    pub fn clamp(&mut self, x: T, y: T)
+    where
+        T: PartialOrd,
+    {
+        self.y = super::min(self.y, y);
+        self.x = super::min(self.x, x);
+    }
+    pub fn clamp_between(&mut self, x_min: T, y_min: T, x_max: T, y_max: T)
+    where
+        T: PartialOrd + Zero<Type = T>,
+    {
+        self.y = super::min(self.y, y_max);
+        self.x = super::min(self.x, x_max);
+
+        self.y = super::max(self.y, y_min);
+        self.x = super::max(self.x, x_min);
+    }
 }
 
 // Operator overloading so that +, -, *, /, -=, +=, *=, /= can be used
