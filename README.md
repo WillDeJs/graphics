@@ -13,11 +13,11 @@ cargo run --example rotatingpng --release
 ```
 Produces:
 <br>
-<img src=".examples/Rotating PNG.gif">
+<img src="examples/Rotating PNG.gif">
 
 ```
 cargo run --example snake --release
 ```
 Produces:
 <br>
-<img src=".examples/Snakegame.gif">
+<img src="examples/Snakegame.gif">
