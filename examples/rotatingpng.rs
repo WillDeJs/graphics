@@ -52,7 +52,7 @@ impl Render2D for Draw2D {
     /// Must be overriden.
     ///
     fn setup(&mut self, _canvas: &mut Canvas) -> bool {
-        let image = PNGImage::from_file("sample.png").unwrap();
+        let image = PNGImage::from_file("../assets/sample.png").unwrap();
         let extractor = SpriteExtractor::from_png(&image, SpriteSize::default(), 0, 0).unwrap();
         self.tile = extractor.extract_whole();
         true

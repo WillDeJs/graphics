@@ -9,7 +9,6 @@ use crate::math::FVec3D;
 use crate::math::Mat3x3;
 use crate::math::Point2D;
 use std::collections::HashMap;
-use std::convert::TryInto;
 
 /// Font letters and symbols.
 // const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
@@ -617,7 +616,7 @@ impl Canvas {
 fn read_font() -> Option<HashMap<char, Sprite>> {
     let mut font_map = HashMap::<char, Sprite>::new();
 
-    match PNGImage::from_file("font2.png") {
+    match PNGImage::from_file("../assets/font2.png") {
         Ok(image) => {
             let extractor =
                 SpriteExtractor::from_png(&image, SpriteSize::new(50, 85), 0, 15).unwrap();
