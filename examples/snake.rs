@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 const GRID_SCALE: f32 = 20.0;
 
 fn main() {
-    let game_canvas = SnakeGame::new(800, 600, "Snake Game".into());
+    let game_canvas = SnakeGame::new(400, 400, "Snake Game".into());
     game_canvas.render();
 }
 

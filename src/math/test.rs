@@ -1,4 +1,5 @@
 use crate::math::matrix::Mat3x3;
+use crate::math::matrix::Mat4x4;
 use crate::math::FVec2D;
 use crate::math::IVec2D;
 
@@ -95,4 +96,79 @@ fn matrix_3x3_inverse() {
     .into();
 
     assert_eq!(a.inverse(), b);
+}
+
+#[test]
+fn matrix_4x4_determinant() {
+    let a: Mat4x4<i32> = [[1, 3, 5, 9], [1, 3, 1, 7], [4, 3, 9, 7], [5, 2, 0, 9]].into();
+    assert_eq!(a.det(), -376);
+}
+#[test]
+fn matrix_4x4_multiplication() {
+    let a: Mat4x4<i32> = [[5, 7, 9, 10], [2, 3, 3, 8], [8, 10, 2, 3], [3, 3, 4, 8]].into();
+    let b: Mat4x4<i32> = [
+        [3, 10, 12, 18],
+        [12, 1, 4, 9],
+        [9, 10, 12, 2],
+        [3, 12, 4, 10],
+    ]
+    .into();
+    let c: Mat4x4<i32> = [
+        [210, 267, 236, 271],
+        [93, 149, 104, 149],
+        [171, 146, 172, 268],
+        [105, 169, 128, 169],
+    ]
+    .into();
+
+    let d = [
+        [10, 14, 18, 20],
+        [4, 6, 6, 16],
+        [16, 20, 4, 6],
+        [6, 6, 8, 16],
+    ]
+    .into();
+    assert_eq!(a * b, c);
+    assert_eq!(a * 2, d);
+}
+
+#[test]
+fn matrix_4x4_division() {
+    let a: Mat4x4<i32> = [[5, 7, 9, 10], [2, 3, 3, 8], [8, 10, 2, 3], [3, 3, 4, 8]].into();
+
+    let b: Mat4x4<i32> = [
+        [10, 14, 18, 20],
+        [4, 6, 6, 16],
+        [16, 20, 4, 6],
+        [6, 6, 8, 16],
+    ]
+    .into();
+    assert_eq!(b / 2, a);
+}
+
+#[test]
+fn matrix_4x4_addition() {
+    let a: Mat4x4<i32> = [[5, 7, 9, 10], [2, 3, 3, 8], [8, 10, 2, 3], [3, 3, 4, 8]].into();
+
+    let b: Mat4x4<i32> = [
+        [10, 14, 18, 20],
+        [4, 6, 6, 16],
+        [16, 20, 4, 6],
+        [6, 6, 8, 16],
+    ]
+    .into();
+    assert_eq!(a + a, b);
+}
+#[test]
+fn matrix_4x4_subtraction() {
+    let a: Mat4x4<i32> = [[5, 7, 9, 10], [2, 3, 3, 8], [8, 10, 2, 3], [3, 3, 4, 8]].into();
+
+    let b: Mat4x4<i32> = [
+        [10, 14, 18, 20],
+        [4, 6, 6, 16],
+        [16, 20, 4, 6],
+        [6, 6, 8, 16],
+    ]
+    .into();
+    assert_eq!(b - a, a);
 }

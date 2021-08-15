@@ -26,10 +26,10 @@ pub type Point2D = crate::math::vector::Vector2D<i32>;
 pub type FVec2D = crate::math::vector::Vector2D<f32>;
 
 /// Floating point 3D Vector type
-pub type Fvec3D = crate::math::vector::Vector3D<f32>;
+pub type FVec3D = crate::math::vector::Vector3D<f32>;
 
 /// Integer 3D vector type
-pub type Ivec3D = crate::math::vector::Vector3D<i32>;
+pub type IVec3D = crate::math::vector::Vector3D<i32>;
 
 pub type FMat3 = crate::math::matrix::Mat3x3<f32>;
 

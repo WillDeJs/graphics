@@ -247,6 +247,14 @@ where
         }
     }
 }
+impl<T> From<Vector3D<T>> for Vector2D<T>
+where
+    T: SimpleMathTrait,
+{
+    fn from(vec: Vector3D<T>) -> Self {
+        Self { x: vec.x, y: vec.y }
+    }
+}
 
 impl AngleTrait for Vector2D<i32> {
     fn angle(&self) -> f32 {
