@@ -616,7 +616,7 @@ impl Canvas {
 fn read_font() -> Option<HashMap<char, Sprite>> {
     let mut font_map = HashMap::<char, Sprite>::new();
 
-    match PNGImage::from_file("../assets/font2.png") {
+    match PNGImage::from_file("./assets/font2.png") {
         Ok(image) => {
             let extractor =
                 SpriteExtractor::from_png(&image, SpriteSize::new(50, 85), 0, 15).unwrap();
