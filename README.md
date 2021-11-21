@@ -23,3 +23,12 @@ cargo run --example snake --release
 Produces:
 <br>
 <img src="examples/Snakegame.gif">
+<br>
+```
+cargo run --example test3d --release
+```
+Produces:
+<br>
+<img src="examples/teacup.gif">
+
+Use arrow keys to control  X and Y viewpoint coordinates. And WASD keys to control perspective.

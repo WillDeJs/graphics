@@ -1,6 +1,8 @@
+use crate::grfx::color::Color;
+use crate::math::FVec3D;
 use crate::math::Point2D;
 #[derive(PartialEq, Debug, Copy, Clone, Default)]
-pub struct Polygon {
+pub struct Polygon2D {
     pub origin: Point2D,
     pub sides: i32,
     pub side_length: i32,
@@ -8,7 +10,7 @@ pub struct Polygon {
 }
 
 #[allow(unused)]
-impl Polygon {
+impl Polygon2D {
     pub fn new(origin: Point2D, sides: i32, side_length: i32, angle: f32) -> Self {
         Self {
             origin,
@@ -34,4 +36,16 @@ impl Polygon {
         }
         return vertices;
     }
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct Triangle3D {
+    pub vertices: [FVec3D; 3],
+    pub color: Color,
+}
+
+#[derive(Default, Clone)]
+pub struct Mesh3D {
+    pub tris: Vec<Triangle3D>,
+    pub vertices: Vec<FVec3D>,
 }

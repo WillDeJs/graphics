@@ -371,11 +371,11 @@ where
     pub fn dot(left: Self, right: Self) -> T {
         left.x * right.x + left.y * right.y + left.z * right.z
     }
-    /// Calculate doct product
+    /// Calculate cross product
     pub fn cross(left: Self, right: Self) -> Self {
         Self {
             x: left.y * right.z - left.z * right.y,
-            y: left.x * right.z - left.z * right.x,
+            y: -(left.x * right.z - left.z * right.x),
             z: left.x * right.y - left.y * right.x,
         }
     }

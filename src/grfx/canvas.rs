@@ -125,7 +125,7 @@ impl Canvas {
     /// dest: final point
     /// color: Pixel color
     ///
-    /// https://www.programmersought.com/article/60715259426/
+    /// <https://www.programmersought.com/article/60715259426/>
     pub fn line_between(&self, origin: Point2D, dest: Point2D, color: Color) {
         let x0 = origin.x;
         let y0 = origin.y;
@@ -190,7 +190,7 @@ impl Canvas {
     /// origin: Center of circle
     /// Radius: Radius
     /// color: Pixel color
-    /// https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/
+    /// <https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/>
     ///
     pub fn circle(&self, origin: Point2D, radius: i32, color: Color) {
         let mut x = 0;
@@ -299,7 +299,8 @@ impl Canvas {
     /// Then we simply draw a line between the previous point and the next one as they will always allign to close the polygon
     ///  due to the angle calculation.
     ///             
-    ///
+    /// <html>
+    /// <pre>
     ///   O ->   ******
     ///       *         *  <-- a
     ///      *            *
@@ -309,16 +310,18 @@ impl Canvas {
     ///         ******
     ///             ^
     ///              d
-    ///
-    ///    In this example we have an exampon so each line differs from the previous in exactly 60 degrees (pi/3)
-    ///     Point O is at 0 degress
-    ///     Point a is at 60 degress
-    ///     Point b is at 120 degress
-    ///     Point c is at 180 degress
-    ///     Point d is at 240 degress
-    ///     Point e is at 300 degress
-    ///     Point f is at 360 degress
-    ///
+    /// </pre>
+    ///    In this example we have a polygon on which each line differs from the previous in exactly 60 degrees (pi/3)
+    /// <ul>
+    ///     <li>Point O is at 0 degress</li>
+    ///     <li>Point a is at 60 degress</li>
+    ///     <li>Point b is at 120 degress</li>
+    ///     <li>Point c is at 180 degress</li>
+    ///     <li>Point d is at 240 degress</li>
+    ///     <li>Point e is at 300 degress</li>
+    ///     <li>Point f is at 360 degress</li>
+    /// </ul>
+    /// <html>
     pub fn polygon(
         &self,
         origin: Point2D,
@@ -352,9 +355,9 @@ impl Canvas {
     /// Height
     /// Color for pixels
     ///  Helpful material to get this working:
-    /// https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/
-    /// https://stackoverflow.com/questions/1201200/fast-algorithm-for-drawing-filled-circles
-    /// https://github.com/OneLoneCoder/olcPixelGameEngine/blob/master/olcPixelGameEngine.h  (Javidx9  github)
+    /// <https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/>
+    /// <https://stackoverflow.com/questions/1201200/fast-algorithm-for-drawing-filled-circles>
+    /// <https://github.com/OneLoneCoder/olcPixelGameEngine/blob/master/olcPixelGameEngine.h>  (Javidx9  github)
     ///
     pub fn fill_circle(&self, origin: Point2D, radius: i32, color: Color) {
         let mut x = 0;
@@ -408,13 +411,13 @@ impl Canvas {
     /// v3 third point
     /// color: Color for the pixels
     ///
-    /// Uses scan line algorithm: https://www.avrfreaks.net/sites/default/files/triangles.c
+    /// Uses scan line algorithm: <https://www.avrfreaks.net/sites/default/files/triangles.c>
     ///
     pub fn fill_triangle(&self, v1: Point2D, v2: Point2D, v3: Point2D, color: Color) {
         let mut a: i32;
         let mut b: i32;
         let last: i32;
-        let mut y: i32;
+        let y: i32;
         let mut x0 = v1.x;
         let mut y0 = v1.y;
 
@@ -438,6 +441,15 @@ impl Canvas {
             std::mem::swap(&mut x0, &mut x1);
         }
 
+        let smallest_x = math::min(x0, math::min(x1, x2));
+        let biggest_x = math::max(x0, math::max(x1, x2));
+        let h_line_plot = |a: i32, b: i32, y: i32| {
+            for i in math::min(a, b)..math::max(a, b) {
+                if i >= smallest_x && i <= biggest_x {
+                    self.plot(i, y, color);
+                }
+            }
+        };
         if y0 == y2 {
             // All on same line case
             a = x0;
@@ -452,19 +464,18 @@ impl Canvas {
             } else if x2 > b {
                 b = x2;
             }
-            self.line(a, y0, b, y0, color);
+            // self.line(a, y0, b, y0, color);
+            h_line_plot(a, b, y0);
             return;
         }
-
         let dx01 = x1 - x0;
         let dy01 = y1 - y0;
         let dx02 = x2 - x0;
-        let dy02 = if y2 != y0 { y2 - y0 } else { 1 };
-        let dx12 = if x2 != x1 { x2 - x1 } else { 1 };
-        let dy12 = if y2 != y1 { y2 - y1 } else { 1 };
+        let dy02 = y2 - y0;
+        let dx12 = x2 - x1;
+        let dy12 = y2 - y1;
         let mut sa = 0;
         let mut sb = 0;
-
         // For upper part of triangle, find scanline crossings for segment
         // 0-1 and 0-2.  If y1=y2 (flat-bottomed triangle), the scanline y
         // is included here (and second loop will be skipped, avoiding a /
@@ -479,13 +490,16 @@ impl Canvas {
             last = y1 - 1;
         } // Skip it
         for y in y0..=last {
-            a = x0 + sa / dy01;
-            b = x0 + sb / dy02;
-            sa += dx01;
-            sb += dx02;
-            // longhand a = x0 + (x1 - x0) * (y - y0) / (y1 - y0)
-            //          b = x0 + (x2 - x0) * (y - y0) / (y2 - y0)
-            self.line(a, y, b, y, color);
+            if dy01 != 0 && dy02 != 0 {
+                a = x0 + sa / dy01;
+                b = x0 + sb / dy02;
+                sa += dx01;
+                sb += dx02;
+                // longhand a = x0 + (x1 - x0) * (y - y0) / (y1 - y0)
+                //          b = x0 + (x2 - x0) * (y - y0) / (y2 - y0)
+                // self.line(a, y, b, y, color);
+                h_line_plot(a, b, y);
+            }
         }
 
         // pick up where we left off
@@ -494,15 +508,17 @@ impl Canvas {
         // 0-2 and 1-2.  This loop is skipped if y1=y2
         sa = dx12 * (y - y1);
         sb = dx02 * (y - y0);
-        while y <= y2 {
-            a = x1 + sa / dy12;
-            b = x0 + sb / dy02;
-            sa += dx12;
-            sb += dx02;
-            // longhand a = x1 + (x2 - x1) * (y - y1) / (y2 - y1)
-            //          b = x0 + (x2 - x0) * (y - y0) / (y2 - y0)
-            self.line(a, y, b, y, color);
-            y += 1;
+        for i in y..=y2 {
+            if dy12 != 0 && dy02 != 0 {
+                a = x1 + sa / dy12;
+                b = x0 + sb / dy02;
+                sa += dx12;
+                sb += dx02;
+                // longhand a = x1 + (x2 - x1) * (y - y1) / (y2 - y1)
+                //          b = x0 + (x2 - x0) * (y - y0) / (y2 - y0)
+                h_line_plot(a, b, i);
+                // self.line(a, y, b, y, color);
+            }
         }
     }
 

@@ -11,7 +11,7 @@ use std::io::Read;
 ///  PNG signature contains the signature of the file
 /// total 5 bytes.
 ///
-/// Source: https://www.w3.org/TR/REC-png-961001
+/// Source: <https://www.w3.org/TR/REC-png-961001>
 ///
 #[derive(Default, Debug, Copy, Clone)]
 pub struct Signature {
@@ -29,9 +29,10 @@ const SZ_CHUNK_COLOR_TYPE: usize = 4;
 /// Each PNG file is expected to start with this valid signature
 const VALID_SIGNATURE: [u8; SZ_SIGNATURE] = [137, 80, 78, 71, 13, 10, 26, 10];
 
-#[doc(hide)]
+#[doc(hidden)]
 // Adam 7 interlacing table
-#[doc(hide)]
+// TODO not implemented interlacing
+#[doc(hidden)]
 #[allow(dead_code)]
 const INTERLACING_SCAN_TABLE: [[u8; 7]; 6] = [
     [0, 0, 4, 0, 2, 0, 1], /* STARTING ROW*/
@@ -42,7 +43,7 @@ const INTERLACING_SCAN_TABLE: [[u8; 7]; 6] = [
     [8, 4, 4, 2, 2, 1, 1], /*LOCK WIDTH */
 ];
 
-#[doc(hide)]
+#[doc(hidden)]
 ///  Interlacing table indexes
 /// INTERLACING NOT IMPLMENTED NOT YET IMPLEMENTED
 #[allow(dead_code)]
@@ -95,8 +96,6 @@ const CRC_TABLE: [u32; 256] = [
     3183342108, 3401237130, 1404277552, 615818150, 3134207493, 3453421203, 1423857449, 601450431,
     3009837614, 3294710456, 1567103746, 711928724, 3020668471, 3272380065, 1510334235, 755167117,
 ];
-
-// static mut CRC_INITIALIZED: bool = false;
 
 const GRAY_SCALE_CTYPE: u8 = 0;
 const RGB_CTYPE: u8 = 2;
@@ -190,6 +189,9 @@ impl TryFrom<&Chunk> for PLTE {
     }
 }
 
+/// The tRNS chunk specifies that the image uses simple transparency.
+//  either alpha values associated with palette entries (for indexed-color images) 
+//  or a single transparent color (for grayscale and truecolor images)
 #[derive(Debug, Clone)]
 #[allow(non_camel_case_types)]
 pub struct tRNS {
@@ -377,7 +379,7 @@ impl PNGImage {
 
                 // This was a bit weird to figure out
                 // thankfully go has a sample
-                //https://golang.org/src/image/png/reader.go
+                //<https://golang.org/src/image/png/reader.go>
                 2 => {
                     for byte in image_data {
                         let mut value = byte;
@@ -788,7 +790,7 @@ fn parse_ihdr_data(data: &Vec<u8>) -> Result<IHDR, Box<dyn Error>> {
 ///
 /// Convert the length array which is given in order of byte MSB-LSB
 /// to an integer
-/// source: https://stackoverflow.com/questions/36669427/does-rust-have-a-way-to-convert-several-bytes-to-a-number
+/// source: <https://stackoverflow.com/questions/36669427/does-rust-have-a-way-to-convert-several-bytes-to-a-number>
 ///
 fn be_bytes_to_u32(array: &[u8; 4]) -> u32 {
     (array[0] as u32) << 24
@@ -797,24 +799,6 @@ fn be_bytes_to_u32(array: &[u8; 4]) -> u32 {
         | (array[3] as u32) << 0
 }
 
-// #[allow(dead_code, unused_variables)]
-// fn make_crc_table() {
-//     let mut c: u32;
-//     for n in 0..256 {
-//         c = n as u32;
-//         for _k in 0..8 {
-//             if c & 1 > 0 {
-//                 c = 0xedb88320_u32 ^ (c >> 1);
-//             } else {
-//                 c = c >> 1;
-//             }
-//         }
-//         unsafe {
-//             CRC_TABLE[n] = c;
-//         };
-//     }
-//     unsafe { CRC_INITIALIZED = true };
-// }
 #[allow(dead_code, unused_variables)]
 fn update_crc(crc: u32, data: &Vec<u8>) -> u32 {
     let mut c = crc;
@@ -857,7 +841,7 @@ fn valid_bit_depth(color_type: u8, value: u8) -> bool {
 ///     Paeth
 ///
 /// Each has its own implementation of course and they all can be found here:
-/// https://www.w3.org/TR/REC-png-961001#R.Filtering
+/// <https://www.w3.org/TR/REC-png-961001#R.Filtering>
 ///
 /// Naturally we error if an unknown filter is given.
 /// We are doing the filtering by a stream thus we need to pass the current row being evaluated
@@ -913,11 +897,8 @@ fn remove_filter(
         // no change
         FilterType::None => {}
 
-        // Invalid filter
+        // Invalid filter, don't error just assume "No filter"
         _ => {
-            // return Err(PNGError::ParssingError(
-            //     "Could not identify filter method".into(),
-            // ));
         }
     }
 
@@ -925,7 +906,7 @@ fn remove_filter(
 }
 
 /// Paeth filer predictor function
-/// https://www.w3.org/TR/REC-png-961001#R.Filtering
+/// <https://www.w3.org/TR/REC-png-961001#R.Filtering>
 fn paeth_predictor(a: u8, b: u8, c: u8) -> u8 {
     let p = a as i32 + b as i32 - c as i32;
     let pa = (p - a as i32).abs();
