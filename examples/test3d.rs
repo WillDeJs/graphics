@@ -1,14 +1,10 @@
-use graphics::grfx::canvas::Canvas;
-use graphics::grfx::shape::Mesh3D;
-use graphics::grfx::shape::Triangle3D;
-// use graphics::grfx::canvas::Transform;
-// use graphics::grfx::canvas::Transformer;
-use graphics::grfx::color::Color;
-use graphics::grfx::render::*;
+use graphics::canvas::Canvas;
+use graphics::color::Color;
+use graphics::render::*;
 
 use graphics::math::matrix::Mat4x4;
 use graphics::math::FVec3D;
-use graphics::utils::obj::Object3D;
+use graphics::utils::d3::*;
 
 fn main() {
     let drawing_canvas = Draw3D::new(800, 600, "3D Render".into());
@@ -24,7 +20,7 @@ pub struct Draw3D {
     theta: f32,
     camera: FVec3D,
     look_dir: FVec3D,
-    yaw:f32,
+    yaw: f32,
 }
 
 impl Draw3D {
@@ -36,9 +32,9 @@ impl Draw3D {
             mesh: Mesh3D::default(),
             theta: std::f32::consts::PI,
             projection: Mat4x4::identity(),
-            camera : FVec3D::new(0.0, 1.0, -3.0),
+            camera: FVec3D::new(0.0, 1.0, -3.0),
             look_dir: FVec3D::new(0.0, 0.0, 0.0),
-            yaw:0.0
+            yaw: 0.0,
         }
     }
 }
@@ -74,12 +70,11 @@ impl Render2D for Draw3D {
     fn update(&mut self, canvas: &mut Canvas, input: &WinitInputHelper, delta_t: f32) -> bool {
         canvas.fill(Color::BLACK);
 
-            
         let rotation_matrix_z: Mat4x4<f32> = Mat4x4::<f32>::rotate_z(self.theta);
         let rotation_matrix_x: Mat4x4<f32> = Mat4x4::<f32>::rotate_x(self.theta / 2.0);
-        
+
         let mat_translation: Mat4x4<f32> = Mat4x4::<f32>::translate(0.0, 0.0, 1.0);
-        // let mut world_matrix = Mat4x4::<f32>::identity();    
+        // let mut world_matrix = Mat4x4::<f32>::identity();
 
         // Upon up and down press change Y axis
         if input.key_pressed(VirtualKeyCode::Down) {
@@ -93,10 +88,10 @@ impl Render2D for Draw3D {
             self.camera.x += 8.0 * delta_t;
         }
         if input.key_pressed(VirtualKeyCode::Left) {
-            self.camera.x -= 8.0* delta_t ;
+            self.camera.x -= 8.0 * delta_t;
         }
 
-        let forward = self.look_dir * 8.0* delta_t;
+        let forward = self.look_dir * 8.0 * delta_t;
         // Use WASD as rotating keys
         if input.key_pressed(VirtualKeyCode::W) {
             self.camera = self.camera + forward;
@@ -114,18 +109,15 @@ impl Render2D for Draw3D {
         let mut world_matrix = rotation_matrix_z * rotation_matrix_x;
         world_matrix = world_matrix * mat_translation;
 
-        
-        let up_vector = FVec3D::new(0.0,1.0, 0.0);
+        let up_vector = FVec3D::new(0.0, 1.0, 0.0);
         let mut target = FVec3D::new(0.0, 0.0, 1.0);
         let camera_rotation = Mat4x4::<f32>::rotate_y(self.yaw);
         self.look_dir = camera_rotation.vector_multiply(target);
         target = self.camera + self.look_dir;
-    
+
         let camera_matrix = Mat4x4::<f32>::point_at(self.camera, target, up_vector);
 
         let mat_view = camera_matrix.inverse();
-
-
 
         let mut tris_to_raster = Vec::<Triangle3D>::with_capacity(self.mesh.tris.len());
         // let rotation_matrix = rotation_matrix_x * rotation_matrix_z;
@@ -156,9 +148,9 @@ impl Render2D for Draw3D {
                 let color = Color::rgb(170, 248, 11) * depth;
 
                 // convert world space to view space
-                viewed.vertices[0]= mat_view.vector_multiply(transformed.vertices[0]);
-                viewed.vertices[1]= mat_view.vector_multiply(transformed.vertices[1]);
-                viewed.vertices[2]= mat_view.vector_multiply(transformed.vertices[2]);
+                viewed.vertices[0] = mat_view.vector_multiply(transformed.vertices[0]);
+                viewed.vertices[1] = mat_view.vector_multiply(transformed.vertices[1]);
+                viewed.vertices[2] = mat_view.vector_multiply(transformed.vertices[2]);
 
                 projected.vertices[0] = self.projection.vector_multiply(viewed.vertices[0]);
                 projected.vertices[1] = self.projection.vector_multiply(viewed.vertices[1]);
@@ -186,7 +178,9 @@ impl Render2D for Draw3D {
             let zsum1 = (a.vertices[0].z + a.vertices[1].z + a.vertices[2].z) / 3.0;
             let zsum2 = (b.vertices[0].z + b.vertices[1].z + b.vertices[2].z) / 3.0;
 
-            zsum2.partial_cmp(&zsum1).unwrap_or(std::cmp::Ordering::Equal)
+            zsum2
+                .partial_cmp(&zsum1)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for triangle in tris_to_raster {

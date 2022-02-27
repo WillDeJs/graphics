@@ -1,9 +1,8 @@
-// use graphics::grfx::Canvas;
-use graphics::grfx::canvas::Canvas;
-use graphics::grfx::color::Color;
-use graphics::grfx::render::InputHelper;
-use graphics::grfx::render::Render2D;
+// use graphics::Canvas;
+use graphics::canvas::Canvas;
+use graphics::color::Color;
 use graphics::math::Point2D;
+use graphics::render::Render2D;
 fn main() {
     let graphics = Graphics;
     graphics.render();
@@ -12,16 +11,19 @@ pub struct Graphics;
 
 impl Render2D for Graphics {
     fn setup(&mut self, canvas: &mut Canvas) -> bool {
-        canvas.fill(Color::BLUE);
+        // canvas.fill(Color::BLACK);
+        canvas.fill_triangle(
+            Point2D::new(100, 100),
+            Point2D::new(300, 100),
+            Point2D::new(150, 250),
+            Color::WHITE,
+        );
         canvas.draw_string(
-            Point2D::new(200, 200),
-            "See Examples!".into(),
-            0.4,
+            Point2D::new(100, 200),
+            "See Examples".into(),
+            0.7,
             Color::GRAY,
         );
-        true
-    }
-    fn update(&mut self, _canvas: &mut Canvas, _input: &InputHelper, _delta_t: f32) -> bool {
         true
     }
 }

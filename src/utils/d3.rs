@@ -1,17 +1,21 @@
-use crate::grfx::color::Color;
-use crate::grfx::shape::Mesh3D;
-use crate::grfx::shape::Triangle3D;
+use crate::color::Color;
 use crate::math::*;
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::result::Result;
+
+/// A parser of object files containing any number of triangles (*.obj)
+/// Currently only triangles are supported.
 pub struct Object3D {
     pub mesh: Mesh3D,
 }
 
 impl Object3D {
+    /// Create a 3D Object from a given obj file with triangles.
+    /// Only triangles are currently supported on the file.
+    /// `filename`  file containing the triangle mesh for the object
     pub fn from_file(filename: &str) -> Result<Object3D, Box<dyn Error>> {
         let file = File::open(filename)?;
         let reader = BufReader::new(file);
@@ -55,4 +59,18 @@ impl Object3D {
             mesh: Mesh3D { tris, vertices },
         })
     }
+}
+
+/// A triangle implementation in 3 dimensions
+#[derive(Default, Clone, Copy)]
+pub struct Triangle3D {
+    pub vertices: [FVec3D; 3],
+    pub color: Color,
+}
+
+/// A mesh of triangles
+#[derive(Default, Clone)]
+pub struct Mesh3D {
+    pub tris: Vec<Triangle3D>,
+    pub vertices: Vec<FVec3D>,
 }

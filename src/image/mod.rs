@@ -6,5 +6,5 @@
 //!    let size  : (u32, u32) = image.size();
 //!
 #[macro_use]
-pub mod macros;
-pub mod imageutils;pub mod png;
+pub mod sprite;
+pub mod png;

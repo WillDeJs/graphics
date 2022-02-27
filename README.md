@@ -32,3 +32,9 @@ Produces:
 <img src="examples/teacup.gif">
 
 Use arrow keys to control  X and Y viewpoint coordinates. And WASD keys to control perspective.
+
+<br>
+Some helpful links for research:
+     <a href="https://iq.opengenus.org/bresenhams-circle-drawing-algorithm"> Circle Drawing </a>
+     <a href="https://stackoverflow.com/questions/1201200/fast-algorithm-for-drawing-filled-circles"> Filled Circle </a>
+     <a href="https://github.com/OneLoneCoder/olcPixelGameEngine/blob/master/olcPixelGameEngine.h">  (Javidx9  github) </a>

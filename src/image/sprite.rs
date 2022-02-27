@@ -1,7 +1,9 @@
-use crate::grfx::color::Color;
-use crate::grfx::image::png::PNGImage;
+use crate::color::Color;
+use crate::image::png::{PNGError, PngImage};
 use crate::math::Point2D;
 use std::error::Error;
+
+use super::png::PngReader;
 
 #[derive(Debug, Default, Clone)]
 pub struct Sprite {
@@ -66,7 +68,7 @@ impl SpriteExtractor {
     }
 
     pub fn from_png(
-        image: &PNGImage,
+        image: &PngImage,
         tile_size: SpriteSize,
         separation_x: usize,
         separation_y: usize,
@@ -84,6 +86,18 @@ impl SpriteExtractor {
             separation_y,
             start: Point2D::default(),
         })
+    }
+
+    pub fn from_file(
+        filename: impl AsRef<str>,
+        tile_size: SpriteSize,
+        separation_x: usize,
+        separation_y: usize,
+    ) -> Result<Self, Box<dyn Error>> {
+        let mut file =
+            std::fs::File::open(filename.as_ref()).or(Err("Problem opening file".to_string()))?;
+        let image = PngReader::read(&mut file)?;
+        Self::from_png(&image, tile_size, separation_x, separation_y)
     }
 
     fn extract_pixels(&mut self, x: usize, y: usize, length: usize) -> Option<&[Color]> {

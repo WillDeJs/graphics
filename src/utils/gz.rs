@@ -1,9 +1,15 @@
-use crate::grfx::image::png::PNGError;
-pub fn inflate_idat(idat: &Vec<u8>) -> Result<Vec<u8>, PNGError> {
-    let decoded = inflate::inflate_bytes_zlib(&idat[..]);
+use crate::image::png::PNGError;
+use miniz_oxide::deflate;
+use miniz_oxide::inflate;
 
-    if decoded.is_err() {
-        return Err(PNGError::ParssingError(decoded.unwrap_err()));
-    }
-    return Ok(decoded.unwrap().iter().map(|e| *e).collect::<Vec<u8>>());
+pub fn inflate_idat(idat: &Vec<u8>) -> Result<Vec<u8>, PNGError> {
+    let decompressed = inflate::decompress_to_vec_zlib(idat).or(Err(PNGError::ParssingError(
+        "Error decompressing image data".into(),
+    )))?;
+
+    Ok(decompressed)
+}
+
+pub fn deflate_idat(idat: &Vec<u8>) -> Vec<u8> {
+    deflate::compress_to_vec_zlib(idat, 0)
 }

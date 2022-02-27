@@ -1,13 +1,11 @@
-use graphics::grfx::canvas::Canvas;
-use graphics::grfx::canvas::Transform;
-use graphics::grfx::canvas::Transformer;
-use graphics::grfx::color;
-use graphics::grfx::image::imageutils::SpriteExtractor;
-use graphics::grfx::image::imageutils::SpriteSize;
-use graphics::grfx::image::imageutils::*;
-use graphics::grfx::image::png::PNGImage;
-use graphics::grfx::render::*;
+use graphics::canvas::Canvas;
+use graphics::canvas::Transform;
+use graphics::canvas::Transformer;
+use graphics::color;
+use graphics::image::png::PngReader;
+use graphics::image::sprite::{Sprite, SpriteExtractor, SpriteSize};
 use graphics::math::Point2D;
+use graphics::render::*;
 
 fn main() {
     let drawing_canvas = Draw2D::new(800, 600, "Tiles".into());
@@ -50,9 +48,9 @@ impl Render2D for Draw2D {
     ///
     /// Setup method called when the world is first created
     /// Must be overriden.
-    ///
     fn setup(&mut self, _canvas: &mut Canvas) -> bool {
-        let image = PNGImage::from_file("./assets/sample.png").unwrap();
+        let image =
+            PngReader::read(&mut std::fs::File::open("./assets/sample.png").unwrap()).unwrap();
         let extractor = SpriteExtractor::from_png(&image, SpriteSize::default(), 0, 0).unwrap();
         self.tile = extractor.extract_whole();
         true

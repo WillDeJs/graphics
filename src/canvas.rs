@@ -1,8 +1,8 @@
-use crate::grfx::color::Color;
-use crate::grfx::image::imageutils::Sprite;
-use crate::grfx::image::imageutils::SpriteExtractor;
-use crate::grfx::image::imageutils::SpriteSize;
-use crate::grfx::image::png::PNGImage;
+use super::image::png::PngReader;
+use crate::color::Color;
+use crate::image::sprite::Sprite;
+use crate::image::sprite::SpriteExtractor;
+use crate::image::sprite::SpriteSize;
 use crate::math;
 use crate::math::FVec2D;
 use crate::math::FVec3D;
@@ -11,15 +11,20 @@ use crate::math::Point2D;
 use std::collections::HashMap;
 
 /// Font letters and symbols.
-// const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
+/// const FONT_LETTERS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,;#$&()?[]}{@*!''";
 pub const FONT_LETTERS: &str = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
+/// Transform Struct
+/// Takes a number of affine transormations
+/// These transformations can be applied to a given target/point/Sprite.
 #[derive(Debug, Copy, Clone)]
 pub enum Transform {
     Rotate(f32),
     Scale(f32, f32),
     Translate(f32, f32),
 }
+
+/// A transformer used to apply several transforms  ona target
 #[allow(dead_code, unused_variables)]
 pub struct Transformer {
     transforms: std::collections::VecDeque<Transform>,
@@ -53,6 +58,13 @@ impl Transformer {
     }
 }
 
+/// A Canvas implementation to draw pixels on a pixel bufer.
+///
+/// Supports methods to:
+/// * Plot
+/// * Draw polygons
+/// * Draw text
+/// * Draw sprite/png images
 #[allow(dead_code, unused_variables)]
 pub struct Canvas {
     width: u32,
@@ -93,9 +105,10 @@ impl Canvas {
 
     ///
     ///  Plots a single pixel at the given coordinates
-    ///     x  -> X axis offset
-    ///     y  -> y axis offset
-    ///     color -> pixel color
+    /// # Arguments
+    ///     `x`   X axis offset
+    ///     `y`   y axis offset
+    ///     `color`  pixel color
     ///
     pub fn plot(&self, x: i32, y: i32, color: Color) {
         // Don't paint transparent pixels
@@ -121,9 +134,9 @@ impl Canvas {
     }
     ///
     /// Draws a line using Bresenham Algorthm
-    /// origin: start point
-    /// dest: final point
-    /// color: Pixel color
+    /// `origin`: start point
+    /// `dest`: final point
+    /// `color`: Pixel color
     ///
     /// <https://www.programmersought.com/article/60715259426/>
     pub fn line_between(&self, origin: Point2D, dest: Point2D, color: Color) {
@@ -187,10 +200,10 @@ impl Canvas {
 
     ///
     /// Draws a hollow circle using Bresenham Algortim for circles
-    /// origin: Center of circle
-    /// Radius: Radius
-    /// color: Pixel color
     /// <https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/>
+    /// `origin`: Center of circle
+    /// `Radius`: Radius
+    /// `color`: Pixel color
     ///
     pub fn circle(&self, origin: Point2D, radius: i32, color: Color) {
         let mut x = 0;
@@ -221,10 +234,10 @@ impl Canvas {
     ///
     /// Draws a hollow rectangle
     /// Takes:
-    /// origin: toip left corner
-    /// Width
-    /// Height
-    /// Color for pixels
+    /// `origin`: toip left corner
+    /// `Width`
+    /// `Height`
+    /// `Color` Pixel color
     ///
     pub fn rectangle(&self, origin: Point2D, width: i32, height: i32, color: Color) {
         let top_right = Point2D::new(origin.x + width, origin.y);
@@ -240,10 +253,10 @@ impl Canvas {
     ///
     /// Draws a filled rectangle
     /// Takes:
-    /// origin: toip left corner
-    /// Width
-    /// Height
-    /// Color for pixels
+    /// `origin`: toip left corner
+    /// `Width`
+    /// `Height`
+    /// `Color` Pixel color
     ///
     pub fn fill_rectangle(&self, origin: &Point2D, width: i32, height: i32, color: Color) {
         for i in 0..=height {
@@ -256,10 +269,10 @@ impl Canvas {
     ///
     /// Draws a hollow triangle
     /// Takes:
-    /// v1 first point
-    /// v2 second point
-    /// v3 third point
-    /// color: Color for the pixels
+    /// `v1` first point
+    /// `v2` second point
+    /// `v3` third point
+    /// `color`: Color for the pixels
     ///
     pub fn triangle(&self, v1: Point2D, v2: Point2D, v3: Point2D, color: Color) {
         self.line_between(v1, v2, color);
@@ -269,8 +282,8 @@ impl Canvas {
 
     ///
     /// Draw a given polygone based on the given vertices/points vector
-    /// vertices -> Points to connect
-    /// color -> color to paint them
+    /// `vertices`  Points to connect
+    /// `color`  color to paint them
     pub fn connect_points(&self, vertices: &Vec<Point2D>, color: Color) {
         let len = vertices.len();
         if len >= 3 {
@@ -285,11 +298,11 @@ impl Canvas {
 
     ///
     /// Draw a regular polygone based on the given start point, number of sides and length
-    /// origin -> First point on the polygon
-    /// sides -> Number of sides on the polygon
-    /// length -> Length of each side of the polygon
-    /// angle -> Optional angle (in degrees) given to start position of polygon
-    /// color -> Line color
+    /// `origin`  First point on the polygon
+    /// `sides`  Number of sides on the polygon
+    /// `length`  Length of each side of the polygon
+    /// `angle`  Optional angle (in degrees) given to start position of polygon
+    /// `color`  Line color
     ///
     /// Not sure if there is a more efficient way of doing this but its similar to to the process of drawing a traingle.
     /// In this case we simply need to know that the exterior angles of a polygon are always 360 degrees or 2PI.
@@ -298,7 +311,7 @@ impl Canvas {
     ///     To determine what the next point is we use the angle for each side (360/sides) and increment accordingly
     /// Then we simply draw a line between the previous point and the next one as they will always allign to close the polygon
     ///  due to the angle calculation.
-    ///             
+    ///
     /// <html>
     /// <pre>
     ///   O ->   ******
@@ -347,18 +360,12 @@ impl Canvas {
         self.fill_circle(origin, 5, Color::BLUE);
     }
 
-    ///
     /// Draws a filled circle
-    /// Takes:
-    /// origin: toip left corner
-    /// Width
-    /// Height
-    /// Color for pixels
-    ///  Helpful material to get this working:
-    /// <https://iq.opengenus.org/bresenhams-circle-drawing-algorithm/>
-    /// <https://stackoverflow.com/questions/1201200/fast-algorithm-for-drawing-filled-circles>
-    /// <https://github.com/OneLoneCoder/olcPixelGameEngine/blob/master/olcPixelGameEngine.h>  (Javidx9  github)
-    ///
+    /// #Arguments   
+    /// `origin` top left corner
+    /// `Width`   width
+    /// `Height`  height
+    /// `Color`   color for pixels
     pub fn fill_circle(&self, origin: Point2D, radius: i32, color: Color) {
         let mut x = 0;
         let mut y = radius;
@@ -406,10 +413,10 @@ impl Canvas {
     ///
     /// Draws a filled  triangle
     /// Takes:
-    /// v1 first point
-    /// v2 second point
-    /// v3 third point
-    /// color: Color for the pixels
+    /// `v1` first point
+    /// `v2` second point
+    /// `v3` third point
+    /// `color` Color for the pixels
     ///
     /// Uses scan line algorithm: <https://www.avrfreaks.net/sites/default/files/triangles.c>
     ///
@@ -522,6 +529,9 @@ impl Canvas {
         }
     }
 
+    /// Draws a sprite at given point
+    /// `origin` top left corner of the sprite
+    /// `tile` sprite tile to draw
     pub fn sprite(&self, origin: Point2D, tile: &Sprite) {
         for (i, pixel) in tile.pixels.iter().enumerate() {
             let x = origin.x() + (i % tile.width) as i32;
@@ -529,10 +539,18 @@ impl Canvas {
             self.plot(x, y, *pixel);
         }
     }
+
+    /// Draw a sprite applying a given transformation
+    /// `tile`  Sprite reference to be drawn
+    /// `transformer`   transformation being applied
     pub fn transform_sprite(&self, tile: &Sprite, transformer: &Transformer) {
         self.transform_sprite_colored(tile, transformer, None);
     }
 
+    /// Draw a transformed colored sprite.
+    /// `tile`  Sprite reference to be drawn
+    /// `transformer`   transformation applied on sprite
+    /// `color`     optional color to override Sprite pixel color.
     pub fn transform_sprite_colored(
         &self,
         tile: &Sprite,
@@ -559,7 +577,7 @@ impl Canvas {
         // I could use Vec2D here since the z component is 1.0 but being able to not skipp a dimension
         // and use a 3D Vector with a 3x3 matrix just makes the concept more understandable
         let tl_corner = FVec3D::new(0.0, 0.0, 1.0); // top left corner
-        let tr_corner = FVec3D::new(tile.width as f32, 0.0, 1.0); // top right corner
+        let tr_corner = FVec3D::new(tile.width as f32, 0.0, 1.0); // top left corner
         let br_corner = FVec3D::new(tile.width as f32, tile.height as f32, 1.0); // right bottom corner
         let bl_corner = FVec3D::new(0.0, tile.height as f32, 1.0); // left bottom corner
 
@@ -607,6 +625,14 @@ impl Canvas {
         }
     }
 
+    /// Draw text at a given point and scale.
+    /// The scale depends on teh size of the sprites in the font image.
+    /// see fonts assets.
+    ///
+    /// `origin`    top left position to start drawin
+    ///  `msg`      message/text to be drawn
+    /// `size`      size/scale of text being rawing
+    /// `color`     color for the text being drawn
     pub fn draw_string(&self, origin: Point2D, msg: String, size: f32, color: Color) {
         if let Some(font) = &self.font {
             let mut width = 0.0;
@@ -632,7 +658,7 @@ impl Canvas {
 fn read_font() -> Option<HashMap<char, Sprite>> {
     let mut font_map = HashMap::<char, Sprite>::new();
 
-    match PNGImage::from_file("./assets/font2.png") {
+    match PngReader::read(&mut std::fs::File::open("./assets/font2.png").ok()?) {
         Ok(image) => {
             let extractor =
                 SpriteExtractor::from_png(&image, SpriteSize::new(50, 85), 0, 15).unwrap();

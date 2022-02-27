@@ -516,7 +516,7 @@ where
     }
 
     /// Scale transform a scale matrix with the given x and y transform values
-    pub fn translate(vx: T, vy: T, vz:T) -> Self
+    pub fn translate(vx: T, vy: T, vz: T) -> Self
     where
         T: Zero<Type = T> + Unit<Type = T>,
     {
@@ -528,7 +528,7 @@ where
     }
 
     /// create a scale matrix with the given x and y transform values
-    pub fn scale(cx: T, cy: T, cz : T) -> Self
+    pub fn scale(cx: T, cy: T, cz: T) -> Self
     where
         T: Zero<Type = T> + Unit<Type = T>,
     {
@@ -582,65 +582,128 @@ where
         return result;
     }
 
-    // From OLC Javidx 
+    // From OLC Javidx
     // https://github.com/OneLoneCoder/videos/blob/master/OneLoneCoder_olcEngine3D_Part3.cpp
-    pub fn point_at(pos: Vector3D<T>, target : Vector3D<T>, up : Vector3D<T>) -> Self where
-    T: Add<Output = T>
-        + Mul<Output = T>
-        + Sub<Output = T>
-        + Div<Output = T>
-        + Neg<Output = T>
-        + Zero<Type = T>
-        + Unit<Type = T>
-        + std::cmp::PartialOrd
-        
+    pub fn point_at(pos: Vector3D<T>, target: Vector3D<T>, up: Vector3D<T>) -> Self
+    where
+        T: Add<Output = T>
+            + Mul<Output = T>
+            + Sub<Output = T>
+            + Div<Output = T>
+            + Neg<Output = T>
+            + Zero<Type = T>
+            + Unit<Type = T>
+            + std::cmp::PartialOrd,
     {
         let forward = (target - pos).unit_vector();
         let a = forward * Vector3D::dot(up, forward);
-        let new_up = (up- a).unit_vector();
-
+        let new_up = (up - a).unit_vector();
 
         let right_dir = Vector3D::cross(new_up, forward);
 
         Self {
-            inner : [
+            inner: [
                 [right_dir.x, right_dir.y, right_dir.z, T::zero()],
                 [new_up.x, new_up.y, new_up.z, T::zero()],
                 [forward.x, forward.y, forward.z, T::zero()],
-                [pos.x, pos.y, pos.z, T::one()]
-            ]
+                [pos.x, pos.y, pos.z, T::one()],
+            ],
         }
     }
 
     // Determine the inverse of this matrix
-    pub fn inverse(&self) -> Self 
-    where T: Add<Output = T>
-        + Mul<Output = T>
-        + Sub<Output = T>
-        + Zero<Type = T>
-        + Unit<Type = T>
-        + Div<Output = T>
-    
+    pub fn inverse(&self) -> Self
+    where
+        T: Add<Output = T>
+            + Mul<Output = T>
+            + Sub<Output = T>
+            + Zero<Type = T>
+            + Unit<Type = T>
+            + Div<Output = T>,
     {
         let mut result = Self::default();
         let det = self.det();
         let m = self.inner;
-        result.inner[0][0] = m[1][2]*m[2][3]*m[3][1] - m[1][3]*m[2][2]*m[3][1] + m[1][3]*m[2][1]*m[3][2] - m[1][1]*m[2][3]*m[3][2] - m[1][2]*m[2][1]*m[3][3] + m[1][1]*m[2][2]*m[3][3];
-        result.inner[0][1] = m[0][3]*m[2][2]*m[3][1] - m[0][2]*m[2][3]*m[3][1] - m[0][3]*m[2][1]*m[3][2] + m[0][1]*m[2][3]*m[3][2] + m[0][2]*m[2][1]*m[3][3] - m[0][1]*m[2][2]*m[3][3];
-        result.inner[0][2] = m[0][2]*m[1][3]*m[3][1] - m[0][3]*m[1][2]*m[3][1] + m[0][3]*m[1][1]*m[3][2] - m[0][1]*m[1][3]*m[3][2] - m[0][2]*m[1][1]*m[3][3] + m[0][1]*m[1][2]*m[3][3];
-        result.inner[0][3] = m[0][3]*m[1][2]*m[2][1] - m[0][2]*m[1][3]*m[2][1] - m[0][3]*m[1][1]*m[2][2] + m[0][1]*m[1][3]*m[2][2] + m[0][2]*m[1][1]*m[2][3] - m[0][1]*m[1][2]*m[2][3];
-        result.inner[1][0] = m[1][3]*m[2][2]*m[3][0] - m[1][2]*m[2][3]*m[3][0] - m[1][3]*m[2][0]*m[3][2] + m[1][0]*m[2][3]*m[3][2] + m[1][2]*m[2][0]*m[3][3] - m[1][0]*m[2][2]*m[3][3];
-        result.inner[1][1] = m[0][2]*m[2][3]*m[3][0] - m[0][3]*m[2][2]*m[3][0] + m[0][3]*m[2][0]*m[3][2] - m[0][0]*m[2][3]*m[3][2] - m[0][2]*m[2][0]*m[3][3] + m[0][0]*m[2][2]*m[3][3];
-        result.inner[1][2] = m[0][3]*m[1][2]*m[3][0] - m[0][2]*m[1][3]*m[3][0] - m[0][3]*m[1][0]*m[3][2] + m[0][0]*m[1][3]*m[3][2] + m[0][2]*m[1][0]*m[3][3] - m[0][0]*m[1][2]*m[3][3];
-        result.inner[1][3] = m[0][2]*m[1][3]*m[2][0] - m[0][3]*m[1][2]*m[2][0] + m[0][3]*m[1][0]*m[2][2] - m[0][0]*m[1][3]*m[2][2] - m[0][2]*m[1][0]*m[2][3] + m[0][0]*m[1][2]*m[2][3];
-        result.inner[2][0] = m[1][1]*m[2][3]*m[3][0] - m[1][3]*m[2][1]*m[3][0] + m[1][3]*m[2][0]*m[3][1] - m[1][0]*m[2][3]*m[3][1] - m[1][1]*m[2][0]*m[3][3] + m[1][0]*m[2][1]*m[3][3];
-        result.inner[2][1] = m[0][3]*m[2][1]*m[3][0] - m[0][1]*m[2][3]*m[3][0] - m[0][3]*m[2][0]*m[3][1] + m[0][0]*m[2][3]*m[3][1] + m[0][1]*m[2][0]*m[3][3] - m[0][0]*m[2][1]*m[3][3];
-        result.inner[2][2] = m[0][1]*m[1][3]*m[3][0] - m[0][3]*m[1][1]*m[3][0] + m[0][3]*m[1][0]*m[3][1] - m[0][0]*m[1][3]*m[3][1] - m[0][1]*m[1][0]*m[3][3] + m[0][0]*m[1][1]*m[3][3];
-        result.inner[2][3] = m[0][3]*m[1][1]*m[2][0] - m[0][1]*m[1][3]*m[2][0] - m[0][3]*m[1][0]*m[2][1] + m[0][0]*m[1][3]*m[2][1] + m[0][1]*m[1][0]*m[2][3] - m[0][0]*m[1][1]*m[2][3];
-        result.inner[3][0] = m[1][2]*m[2][1]*m[3][0] - m[1][1]*m[2][2]*m[3][0] - m[1][2]*m[2][0]*m[3][1] + m[1][0]*m[2][2]*m[3][1] + m[1][1]*m[2][0]*m[3][2] - m[1][0]*m[2][1]*m[3][2];
-        result.inner[3][1] = m[0][1]*m[2][2]*m[3][0] - m[0][2]*m[2][1]*m[3][0] + m[0][2]*m[2][0]*m[3][1] - m[0][0]*m[2][2]*m[3][1] - m[0][1]*m[2][0]*m[3][2] + m[0][0]*m[2][1]*m[3][2];
-        result.inner[3][2] = m[0][2]*m[1][1]*m[3][0] - m[0][1]*m[1][2]*m[3][0] - m[0][2]*m[1][0]*m[3][1] + m[0][0]*m[1][2]*m[3][1] + m[0][1]*m[1][0]*m[3][2] - m[0][0]*m[1][1]*m[3][2];
-        result.inner[3][3] = m[0][1]*m[1][2]*m[2][0] - m[0][2]*m[1][1]*m[2][0] + m[0][2]*m[1][0]*m[2][1] - m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] + m[0][0]*m[1][1]*m[2][2];
+        result.inner[0][0] = m[1][2] * m[2][3] * m[3][1] - m[1][3] * m[2][2] * m[3][1]
+            + m[1][3] * m[2][1] * m[3][2]
+            - m[1][1] * m[2][3] * m[3][2]
+            - m[1][2] * m[2][1] * m[3][3]
+            + m[1][1] * m[2][2] * m[3][3];
+        result.inner[0][1] =
+            m[0][3] * m[2][2] * m[3][1] - m[0][2] * m[2][3] * m[3][1] - m[0][3] * m[2][1] * m[3][2]
+                + m[0][1] * m[2][3] * m[3][2]
+                + m[0][2] * m[2][1] * m[3][3]
+                - m[0][1] * m[2][2] * m[3][3];
+        result.inner[0][2] = m[0][2] * m[1][3] * m[3][1] - m[0][3] * m[1][2] * m[3][1]
+            + m[0][3] * m[1][1] * m[3][2]
+            - m[0][1] * m[1][3] * m[3][2]
+            - m[0][2] * m[1][1] * m[3][3]
+            + m[0][1] * m[1][2] * m[3][3];
+        result.inner[0][3] =
+            m[0][3] * m[1][2] * m[2][1] - m[0][2] * m[1][3] * m[2][1] - m[0][3] * m[1][1] * m[2][2]
+                + m[0][1] * m[1][3] * m[2][2]
+                + m[0][2] * m[1][1] * m[2][3]
+                - m[0][1] * m[1][2] * m[2][3];
+        result.inner[1][0] =
+            m[1][3] * m[2][2] * m[3][0] - m[1][2] * m[2][3] * m[3][0] - m[1][3] * m[2][0] * m[3][2]
+                + m[1][0] * m[2][3] * m[3][2]
+                + m[1][2] * m[2][0] * m[3][3]
+                - m[1][0] * m[2][2] * m[3][3];
+        result.inner[1][1] = m[0][2] * m[2][3] * m[3][0] - m[0][3] * m[2][2] * m[3][0]
+            + m[0][3] * m[2][0] * m[3][2]
+            - m[0][0] * m[2][3] * m[3][2]
+            - m[0][2] * m[2][0] * m[3][3]
+            + m[0][0] * m[2][2] * m[3][3];
+        result.inner[1][2] =
+            m[0][3] * m[1][2] * m[3][0] - m[0][2] * m[1][3] * m[3][0] - m[0][3] * m[1][0] * m[3][2]
+                + m[0][0] * m[1][3] * m[3][2]
+                + m[0][2] * m[1][0] * m[3][3]
+                - m[0][0] * m[1][2] * m[3][3];
+        result.inner[1][3] = m[0][2] * m[1][3] * m[2][0] - m[0][3] * m[1][2] * m[2][0]
+            + m[0][3] * m[1][0] * m[2][2]
+            - m[0][0] * m[1][3] * m[2][2]
+            - m[0][2] * m[1][0] * m[2][3]
+            + m[0][0] * m[1][2] * m[2][3];
+        result.inner[2][0] = m[1][1] * m[2][3] * m[3][0] - m[1][3] * m[2][1] * m[3][0]
+            + m[1][3] * m[2][0] * m[3][1]
+            - m[1][0] * m[2][3] * m[3][1]
+            - m[1][1] * m[2][0] * m[3][3]
+            + m[1][0] * m[2][1] * m[3][3];
+        result.inner[2][1] =
+            m[0][3] * m[2][1] * m[3][0] - m[0][1] * m[2][3] * m[3][0] - m[0][3] * m[2][0] * m[3][1]
+                + m[0][0] * m[2][3] * m[3][1]
+                + m[0][1] * m[2][0] * m[3][3]
+                - m[0][0] * m[2][1] * m[3][3];
+        result.inner[2][2] = m[0][1] * m[1][3] * m[3][0] - m[0][3] * m[1][1] * m[3][0]
+            + m[0][3] * m[1][0] * m[3][1]
+            - m[0][0] * m[1][3] * m[3][1]
+            - m[0][1] * m[1][0] * m[3][3]
+            + m[0][0] * m[1][1] * m[3][3];
+        result.inner[2][3] =
+            m[0][3] * m[1][1] * m[2][0] - m[0][1] * m[1][3] * m[2][0] - m[0][3] * m[1][0] * m[2][1]
+                + m[0][0] * m[1][3] * m[2][1]
+                + m[0][1] * m[1][0] * m[2][3]
+                - m[0][0] * m[1][1] * m[2][3];
+        result.inner[3][0] =
+            m[1][2] * m[2][1] * m[3][0] - m[1][1] * m[2][2] * m[3][0] - m[1][2] * m[2][0] * m[3][1]
+                + m[1][0] * m[2][2] * m[3][1]
+                + m[1][1] * m[2][0] * m[3][2]
+                - m[1][0] * m[2][1] * m[3][2];
+        result.inner[3][1] = m[0][1] * m[2][2] * m[3][0] - m[0][2] * m[2][1] * m[3][0]
+            + m[0][2] * m[2][0] * m[3][1]
+            - m[0][0] * m[2][2] * m[3][1]
+            - m[0][1] * m[2][0] * m[3][2]
+            + m[0][0] * m[2][1] * m[3][2];
+        result.inner[3][2] =
+            m[0][2] * m[1][1] * m[3][0] - m[0][1] * m[1][2] * m[3][0] - m[0][2] * m[1][0] * m[3][1]
+                + m[0][0] * m[1][2] * m[3][1]
+                + m[0][1] * m[1][0] * m[3][2]
+                - m[0][0] * m[1][1] * m[3][2];
+        result.inner[3][3] = m[0][1] * m[1][2] * m[2][0] - m[0][2] * m[1][1] * m[2][0]
+            + m[0][2] * m[1][0] * m[2][1]
+            - m[0][0] * m[1][2] * m[2][1]
+            - m[0][1] * m[1][0] * m[2][2]
+            + m[0][0] * m[1][1] * m[2][2];
 
         // return after deviding by determinant
         result / det

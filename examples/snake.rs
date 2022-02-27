@@ -1,6 +1,6 @@
-use graphics::grfx::canvas::Canvas;
-use graphics::grfx::color::Color;
-use graphics::grfx::render::*;
+use graphics::canvas::Canvas;
+use graphics::color::Color;
+use graphics::render::*;
 use graphics::math::FVec2D;
 use graphics::math::Point2D;
 use rand::Rng;

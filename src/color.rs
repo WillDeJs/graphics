@@ -22,16 +22,38 @@ impl Color {
     pub const GRAY: Color = Color(127, 127, 127, 255);
     pub const TRANSPARENT: Color = Color(255, 255, 255, 0);
 
-    /// Create a new color
+    /// Create a new color from RGB values
+    ///
+    /// # Arguments
+    /// `r`  Red component
+    /// `g`  Green component
+    /// `b`  Blue component
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self(r, g, b, 255)
     }
+
+    /// Create a new color from RGB values
+    ///
+    /// # Arguments
+    /// `r`  Red component
+    /// `g`  Green component
+    /// `b`  Blue component
+    /// `a`  Alpha component 0 - 244
     pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self(r, g, b, a)
     }
+
+    /// Build a color from byte array
+    /// # Arguments
+    /// `bytes`  Byte[4] array with bytes for color
     pub fn from_bytes(bytes: &[u8; 4]) -> Self {
         Self(bytes[0], bytes[1], bytes[2], bytes[3])
     }
+
+    /// Build a color from byte slice
+    /// Slice is spected to have at least 3 bytes.
+    /// # Arguments
+    /// `bytes`  bytes slice.
     pub fn from_slice(bytes: &[u8]) -> Self {
         let mut array: [u8; 4] = [0, 0, 0, 255];
 
@@ -43,24 +65,24 @@ impl Color {
         }
         Self::from_bytes(&array)
     }
-    // Retrieve red component
+    /// Retrieve red component
     pub fn r(&self) -> u8 {
         self.0
     }
-    // Retrieve green component
+    /// Retrieve green component
     pub fn g(&self) -> u8 {
         self.1
     }
-    // Retrieve blue component
+    /// Retrieve blue component
     pub fn b(&self) -> u8 {
         self.2
     }
+
+    /// Retrieve alpha component
     pub fn alpha(&self) -> u8 {
         self.3
     }
-    pub fn to_string(&self) -> String {
-        format!("{} {} {}\n", self.0, self.1, self.2)
-    }
+
     /// Liniarly interpolate the color based on the values of a vector given
     pub fn difuse(&self, col: &Color) -> Self {
         Self(

@@ -1,4 +1,4 @@
-use crate::grfx::canvas::Canvas;
+use crate::canvas::Canvas;
 pub use glium::glutin::event::VirtualKeyCode;
 use glium::glutin::event::{Event, StartCause};
 use glium::glutin::event_loop::ControlFlow;
@@ -42,12 +42,16 @@ pub trait Render2D {
     /// Setup method called when the world is first created
     /// Must be overriden.
     ///
-    fn setup(&mut self, canvas: &mut Canvas) -> bool;
+    fn setup(&mut self, canvas: &mut Canvas) -> bool {
+        true
+    }
 
     /// Update method called when the canvas is to be updated
     /// This is called periodically per frame and each frame is drawn individually
     /// Must be overriden/implmented
-    fn update(&mut self, canvas: &mut Canvas, input: &InputHelper, delta_t: f32) -> bool;
+    fn update(&mut self, canvas: &mut Canvas, events: &InputHelper, delta_t: f32) -> bool {
+        true
+    }
 
     fn render(mut self)
     where
