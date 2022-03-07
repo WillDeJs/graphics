@@ -153,7 +153,7 @@ impl Mul<f32> for Color {
 impl Mul<&Color> for f32 {
     type Output = Color;
     fn mul(self, color: &Color) -> Self::Output {
-        color.clone() * self
+        *color * self
     }
 }
 
@@ -161,7 +161,7 @@ impl Mul<&Color> for f32 {
 impl Mul<Color> for f32 {
     type Output = Color;
     fn mul(self, color: Color) -> Self::Output {
-        color.clone() * self
+        color * self
     }
 }
 

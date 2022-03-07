@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::image::png::{PNGError, PngImage};
+use crate::image::png::PngImage;
 use crate::math::Point2D;
 use std::error::Error;
 
@@ -18,10 +18,7 @@ impl Sprite {
             None
         } else {
             let normalized_position = y * self.width + x;
-            match self.pixels.get(normalized_position) {
-                Some(&color) => Some(color),
-                None => None,
-            }
+            self.pixels.get(normalized_position).copied()
         }
     }
 }
@@ -94,8 +91,7 @@ impl SpriteExtractor {
         separation_x: usize,
         separation_y: usize,
     ) -> Result<Self, Box<dyn Error>> {
-        let mut file =
-            std::fs::File::open(filename.as_ref()).or(Err("Problem opening file".to_string()))?;
+        let mut file = std::fs::File::open(filename.as_ref())?;
         let image = PngReader::read(&mut file)?;
         Self::from_png(&image, tile_size, separation_x, separation_y)
     }

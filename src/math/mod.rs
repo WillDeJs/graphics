@@ -76,7 +76,7 @@ pub trait PolarTrait<Rhs = Self>
 where
     Self: Sized,
 {
-    fn from_polar(self, angle: f32) -> (Self, Self);
+    fn polar(self, angle: f32) -> (Self, Self);
 }
 
 impl SquareRoot for i8 {
@@ -111,7 +111,7 @@ impl SquareRoot for f32 {
 }
 
 impl PolarTrait for i8 {
-    fn from_polar(self, angle: f32) -> (i8, i8) {
+    fn polar(self, angle: f32) -> (i8, i8) {
         (
             (self as f32 * angle.sin()) as i8,
             (self as f32 * angle.cos()) as i8,
@@ -119,7 +119,7 @@ impl PolarTrait for i8 {
     }
 }
 impl PolarTrait for i16 {
-    fn from_polar(self, angle: f32) -> (i16, i16) {
+    fn polar(self, angle: f32) -> (i16, i16) {
         (
             (self as f32 * angle.sin()) as i16,
             (self as f32 * angle.cos()) as i16,
@@ -127,7 +127,7 @@ impl PolarTrait for i16 {
     }
 }
 impl PolarTrait for i32 {
-    fn from_polar(self, angle: f32) -> (i32, i32) {
+    fn polar(self, angle: f32) -> (i32, i32) {
         (
             (self as f32 * angle.sin()) as i32,
             (self as f32 * angle.cos()) as i32,
@@ -135,17 +135,17 @@ impl PolarTrait for i32 {
     }
 }
 impl PolarTrait for f64 {
-    fn from_polar(self, angle: f32) -> (f64, f64) {
+    fn polar(self, angle: f32) -> (f64, f64) {
         (self * angle.sin() as f64, self * angle.cos() as f64)
     }
 }
 impl PolarTrait for f32 {
-    fn from_polar(self, angle: f32) -> (f32, f32) {
+    fn polar(self, angle: f32) -> (f32, f32) {
         (self * angle.sin(), self * angle.cos())
     }
 }
 impl PolarTrait for u32 {
-    fn from_polar(self, angle: f32) -> (u32, u32) {
+    fn polar(self, angle: f32) -> (u32, u32) {
         (
             (self as f32 * angle.sin().abs()) as u32,
             (self as f32 * angle.cos().abs()) as u32,

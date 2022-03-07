@@ -49,12 +49,17 @@ impl Transformer {
     }
     pub fn all(&self) -> Vec<Transform> {
         (&self.transforms)
-            .into_iter()
-            .map(|el| *el)
+            .iter()
+            .copied()
             .collect::<Vec<Transform>>()
     }
     pub fn count(&self) -> usize {
         self.transforms.len()
+    }
+}
+impl Default for Transformer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -106,9 +111,9 @@ impl Canvas {
     ///
     ///  Plots a single pixel at the given coordinates
     /// # Arguments
-    ///     `x`   X axis offset
-    ///     `y`   y axis offset
-    ///     `color`  pixel color
+    /// `x`   X axis offset
+    /// `y`   y axis offset
+    /// `color`  pixel color
     ///
     pub fn plot(&self, x: i32, y: i32, color: Color) {
         // Don't paint transparent pixels
@@ -174,10 +179,10 @@ impl Canvas {
             while x < x0.max(x1) {
                 x += 1;
                 if decision < 0 {
-                    decision = decision + 2 * dy.abs();
+                    decision += 2 * dy.abs();
                 } else {
                     y += if dy >= 0 { 1 } else { -1 };
-                    decision = decision + 2 * (dy.abs() - dx);
+                    decision += 2 * (dy.abs() - dx);
                 }
                 self.plot(x, y, color);
             }
@@ -188,10 +193,10 @@ impl Canvas {
             while x < x0.max(x1) {
                 y += if dy >= 0 { 1 } else { -1 };
                 if decision < 0 {
-                    decision = decision + 2 * dx;
+                    decision += 2 * dx;
                 } else {
                     x += 1;
-                    decision = decision + 2 * (dx - dy.abs());
+                    decision += 2 * (dx - dy.abs());
                 }
                 self.plot(x, y, color);
             }
@@ -284,7 +289,7 @@ impl Canvas {
     /// Draw a given polygone based on the given vertices/points vector
     /// `vertices`  Points to connect
     /// `color`  color to paint them
-    pub fn connect_points(&self, vertices: &Vec<Point2D>, color: Color) {
+    pub fn connect_points(&self, vertices: &[Point2D], color: Color) {
         let len = vertices.len();
         if len >= 3 {
             let first = vertices[0];
@@ -423,8 +428,7 @@ impl Canvas {
     pub fn fill_triangle(&self, v1: Point2D, v2: Point2D, v3: Point2D, color: Color) {
         let mut a: i32;
         let mut b: i32;
-        let last: i32;
-        let y: i32;
+
         let mut x0 = v1.x;
         let mut y0 = v1.y;
 
@@ -489,13 +493,15 @@ impl Canvas {
         // error there), otherwise scanline y1 is skipped here and handle
         // in the second loop...which also avoids a /0 error here if y0=y
         // (flat-topped triangle)
-        if y1 == y2 {
-            last = y1;
+        let last = if y1 == y2 {
+            y1
         }
         // Include y1 scanline
         else {
-            last = y1 - 1;
-        } // Skip it
+            y1 - 1
+        };
+
+        // Skip it
         for y in y0..=last {
             if dy01 != 0 && dy02 != 0 {
                 a = x0 + sa / dy01;
@@ -510,7 +516,7 @@ impl Canvas {
         }
 
         // pick up where we left off
-        y = last;
+        let y = last;
         // For lower part of triangle, find scanline crossings for segment
         // 0-2 and 1-2.  This loop is skipped if y1=y2
         sa = dx12 * (y - y1);
@@ -646,7 +652,7 @@ impl Canvas {
                         translate_point.x(),
                         translate_point.y(),
                     ));
-                    self.transform_sprite_colored(&sprite, &transformer, Some(color));
+                    self.transform_sprite_colored(sprite, &transformer, Some(color));
                 }
                 translate_point = FVec2D::new(translate_point.x() + width, translate_point.y());
             }

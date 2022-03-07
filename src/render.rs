@@ -115,13 +115,12 @@ pub trait Render2D {
                         next_frame_time += Duration::from_nanos(frames_per_sec);
                         *control_flow = ControlFlow::WaitUntil(next_frame_time);
                     }
-                    Event::WindowEvent { ref event, .. } => match event {
-                        glium::glutin::event::WindowEvent::CloseRequested => {
+                    Event::WindowEvent { ref event, .. } => {
+                        if event == &glium::glutin::event::WindowEvent::CloseRequested {
                             *control_flow = ControlFlow::Exit
                         }
+                    }
 
-                        _ => (),
-                    },
                     _ => (),
                 }
                 input.update(&event);

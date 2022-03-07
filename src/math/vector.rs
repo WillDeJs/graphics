@@ -39,7 +39,7 @@ where
     }
 
     pub fn from_polar(magnitude: T, radians: f32) -> Self {
-        magnitude.from_polar(radians).into()
+        magnitude.polar(radians).into()
     }
 
     /// Retrieve x component
@@ -260,35 +260,35 @@ impl AngleTrait for Vector2D<i32> {
     fn angle(&self) -> f32 {
         let x = self.x as f32;
         let y = self.y as f32;
-        return (x / y).atan();
+        (x / y).atan()
     }
 }
 impl AngleTrait for Vector2D<f32> {
     fn angle(&self) -> f32 {
         let x = self.x;
         let y = self.y;
-        return (x / y).atan();
+        (x / y).atan()
     }
 }
 impl AngleTrait for Vector2D<i8> {
     fn angle(&self) -> f32 {
         let x = self.x as f32;
         let y = self.y as f32;
-        return (x / y).atan();
+        (x / y).atan()
     }
 }
 impl AngleTrait for Vector2D<i16> {
     fn angle(&self) -> f32 {
         let x = self.x as f32;
         let y = self.y as f32;
-        return (x / y).atan();
+        (x / y).atan()
     }
 }
 impl AngleTrait for Vector2D<f64> {
     fn angle(&self) -> f32 {
         let x = self.x as f32;
         let y = self.y as f32;
-        return (x / y).atan();
+        (x / y).atan()
     }
 }
 
@@ -387,7 +387,7 @@ where
         let a_m: f32 = a.length().cast();
         let b_m: f32 = b.length().cast();
         let a_b_dot: f32 = Vector3D::dot(a, b).cast();
-        return (a_b_dot / (a_m * b_m)).acos();
+        (a_b_dot / (a_m * b_m)).acos()
     }
 
     pub fn to_f32(self) -> Vector3D<f32>

@@ -25,9 +25,10 @@ pub struct PngHeader {
 
 /// A PNG Image struct that contains a signature and a list of chunks
 #[derive(Default, Debug, Clone)]
+#[allow(dead_code)]
 pub struct PngImage {
     header: PngHeader,
-    plte: Option<PLTE>,
+    plte: Option<Plte>,
     idat: Vec<u8>,
     other_chunks: Vec<Chunk>,
 }
@@ -78,10 +79,10 @@ impl PngImage {
             PALETTE_INDEX_CTYPE => {
                 if let Some(plte) = &self.plte {
                     match self.header.bit_depth {
-                        1 => palette_index_one_bit(&image_data, &plte),
-                        2 => palette_index_two_bits(&image_data, &plte),
-                        4 => palette_index_four_bits(&image_data, &plte),
-                        8 => palette_index_eight_bits(&image_data, &plte),
+                        1 => palette_index_one_bit(&image_data, plte),
+                        2 => palette_index_two_bits(&image_data, plte),
+                        4 => palette_index_four_bits(&image_data, plte),
+                        8 => palette_index_eight_bits(&image_data, plte),
                         _ => Vec::new(),
                     }
                 } else {
@@ -104,6 +105,11 @@ impl PngImage {
         Ok(pixels)
     }
 
+    /// Get all other chuncks in the PNG that don't contain image/pixel data
+    pub fn non_data_chunks(&self) -> &Vec<Chunk> {
+        &self.other_chunks
+    }
+
     /// Helper get the number of bytes per pixel of this image
     fn bytes_per_pixel(&self) -> usize {
         let channels = match self.header.color_type {
@@ -115,7 +121,7 @@ impl PngImage {
             _ => 1,
         };
         let bits = self.header.bit_depth * channels;
-        return (bits as f32 / 8.0).ceil() as usize;
+        (bits as f32 / 8.0).ceil() as usize
     }
 
     /// Helper gets the number of pixels per row (consider image as matrix)
@@ -128,12 +134,12 @@ impl PngImage {
             RGB_ALPHA_CTYPE => 4,
             _ => 1,
         };
-        return channels * (self.header.bit_depth as usize) * (self.width() as usize) / 8;
+        channels * (self.header.bit_depth as usize) * (self.width() as usize) / 8
     }
 
     /// Collect all the image data on the image and return it as a vector
     fn image_data(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-        let decompressed: Vec<u8> = gz::inflate_idat(&self.idat)?;
+        let decompressed: Vec<u8> = gz::decompress_zlib(&self.idat)?;
         let bpp = self.bytes_per_pixel();
         let row_len = self.row_length();
 
@@ -165,8 +171,8 @@ impl PngReader {
     pub fn read(image_file: &mut impl std::io::Read) -> Result<PngImage, Box<dyn Error>> {
         let mut data = Vec::<u8>::new();
         let mut idat = Vec::<u8>::new();
-        let mut signature = [0 as u8; SZ_SIGNATURE];
-        let mut plte: Option<PLTE> = None;
+        let mut signature = [0_u8; SZ_SIGNATURE];
+        let mut plte: Option<Plte> = None;
         let mut header = PngHeader::default();
         let mut other_chunks = Vec::<Chunk>::new();
 
@@ -189,7 +195,7 @@ impl PngReader {
 
             match &chunk.c_type {
                 IDAT_TYPE => idat.extend_from_slice(&chunk.data[..]),
-                PLTE_TYPE => plte = Some(PLTE::try_from(&chunk)?),
+                PLTE_TYPE => plte = Some(Plte::try_from(&chunk)?),
                 IHDR_TYPE => header = parse_ihdr_data(&chunk.data)?,
                 IEND_TYPE => continue,
                 // collect other chuncks, don't let them go to waste
@@ -220,11 +226,11 @@ impl PngReader {
 ///
 /// # Example
 /// ```no_run
-/// use graphics::color::Color;
-/// use graphics::math::Point2D;
-/// use graphics::canvas::Canvas;
-/// use graphics::image::png::PngWriter;
-/// fn main() {
+/// # use graphics::color::Color;
+/// # use graphics::math::Point2D;
+/// # use graphics::canvas::Canvas;
+/// # use graphics::image::png::PngWriter;
+/// # fn main() {
 ///     let canvas = Canvas::new(400, 400);
 ///     let origin = Point2D::new(200,200);
 ///     canvas.fill_circle(origin, 50, Color::BLUE);
@@ -233,17 +239,17 @@ impl PngReader {
 ///     let pixels = canvas.pixels.borrow();
 ///     let writer = PngWriter::new(canvas.width(), canvas.height(), &pixels).unwrap();
 ///     writer.write(&mut file);
-/// }
+/// #}
 /// ```
 pub struct PngWriter<'a> {
     width: u32,
     height: u32,
-    pixels: &'a Vec<Color>,
+    pixels: &'a [Color],
     chunks: Vec<Chunk>,
 }
 
 impl<'a> PngWriter<'a> {
-    pub fn new(width: u32, height: u32, pixels: &'a Vec<Color>) -> Result<Self, PNGError> {
+    pub fn new(width: u32, height: u32, pixels: &'a [Color]) -> Result<Self, PNGError> {
         if pixels.len() == (width * height) as usize {
             Ok(Self {
                 width,
@@ -259,7 +265,7 @@ impl<'a> PngWriter<'a> {
     /// Write a
     pub fn write(&self, writer: &mut impl std::io::Write) -> std::io::Result<()> {
         // PNG Signature
-        writer.write(&VALID_SIGNATURE[..])?;
+        writer.write_all(&VALID_SIGNATURE[..])?;
 
         // Header information 8 bit depth, RGBA, no filter
         let header = PngHeader {
@@ -285,7 +291,7 @@ impl<'a> PngWriter<'a> {
         }
 
         // compress for writing
-        let compressed_idat = gz::deflate_idat(&idat);
+        let compressed_idat = gz::compress_zlib(&idat);
         let idat_chunk = Chunk::new(*IDAT_TYPE, compressed_idat);
 
         // write to file
@@ -297,7 +303,7 @@ impl<'a> PngWriter<'a> {
         }
 
         // Write ending chunk
-        writer.write(IEND_TYPE)?;
+        writer.write_all(IEND_TYPE)?;
 
         Ok(())
     }
@@ -313,8 +319,8 @@ impl<'a> PngWriter<'a> {
             .chunks
             .iter()
             .filter(|c| c.c_type != c_type)
-            .map(|c| c.clone())
-            .collect::<Vec<Chunk>>();
+            .cloned()
+            .collect();
     }
     /// Remove a chunk by index
     pub fn remove(&mut self, index: usize) {
@@ -376,10 +382,10 @@ impl Chunk {
 
     /// Writes all data in a chunk to a Writer/File
     fn write_all(&self, writer: &mut impl std::io::Write) -> std::io::Result<()> {
-        writer.write(&self.length.to_be_bytes()[..])?;
-        writer.write(&self.c_type)?;
-        writer.write(&self.data[..])?;
-        writer.write(&self.crc[..])?;
+        writer.write_all(&self.length.to_be_bytes()[..])?;
+        writer.write_all(&self.c_type)?;
+        writer.write_all(&self.data[..])?;
+        writer.write_all(&self.crc[..])?;
         Ok(())
     }
 }
@@ -406,16 +412,16 @@ impl fmt::Display for Chunk {
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 #[doc(hidden)]
-struct PLTE {
+struct Plte {
     colors: [Color; 256],
 }
 
-impl TryFrom<&Chunk> for PLTE {
+impl TryFrom<&Chunk> for Plte {
     type Error = PNGError;
-    fn try_from(chunk: &Chunk) -> Result<PLTE, Self::Error> {
+    fn try_from(chunk: &Chunk) -> Result<Plte, Self::Error> {
         let mut colors: [Color; 256] = [Color::BLACK; 256];
         for (i, color_chunk) in chunk.data[..].chunks_exact(3).enumerate() {
-            let color = Color::from_slice(&color_chunk[..]);
+            let color = Color::from_slice(color_chunk);
             colors[i] = color;
         }
         Ok(Self { colors })
@@ -448,7 +454,7 @@ impl From<&Chunk> for tRNS {
 /// The IDAT (IMAGE DATA) chunck contains the actual image data.
 #[derive(Default, Debug, Clone)]
 #[allow(dead_code)]
-struct IDAT {
+struct Idat {
     data: Vec<u8>,
 }
 #[derive(Default, Debug, Clone)]
@@ -456,9 +462,6 @@ struct IDAT {
 struct gAMA {
     gamma: u32,
 }
-/// Tje last cunk that must appaer LAST and does not contain any data.
-#[derive(Default, Debug, Clone)]
-struct IEND {}
 
 /// Different allowed filter type
 #[derive(Debug, Copy, Clone)]
@@ -514,12 +517,12 @@ impl fmt::Display for PNGError {
 #[derive(Debug, Clone)]
 struct ChunkDecoder<'a> {
     start: usize,
-    data: &'a Vec<u8>,
+    data: &'a [u8],
 }
 
 impl<'a> ChunkDecoder<'a> {
     /// Initialize the chunk decoder with a vector of bytes (usually from a file)
-    pub fn from_data(data: &'a Vec<u8>) -> Self {
+    pub fn from_data(data: &'a [u8]) -> Self {
         Self { start: 0, data }
     }
 
@@ -531,7 +534,7 @@ impl<'a> ChunkDecoder<'a> {
             value = Some(&self.data[self.start..self.start + length]);
             self.start += length;
         }
-        return value;
+        value
     }
 }
 
@@ -567,14 +570,14 @@ impl<'a> Iterator for ChunkDecoder<'a> {
 struct RowDecoder<'a> {
     row_len: usize,
     start: usize,
-    data: &'a Vec<u8>,
+    data: &'a [u8],
     bpp: usize,
     previous_row: Vec<u8>,
 }
 
 impl<'a> RowDecoder<'a> {
     /// Initialize the filter  decoder with a vector of bytes (usually from a file)
-    pub fn new(data: &'a Vec<u8>, row_len: usize, bpp: usize) -> Self {
+    pub fn new(data: &'a [u8], row_len: usize, bpp: usize) -> Self {
         Self {
             row_len,
             start: 0,
@@ -592,7 +595,7 @@ impl<'a> RowDecoder<'a> {
             value = Some(&self.data[self.start..self.start + length]);
             self.start += length;
         }
-        return value;
+        value
     }
 }
 /// Allow calling an interator on the ChunkDecodor to get each chunk
@@ -602,17 +605,17 @@ impl<'a> Iterator for RowDecoder<'a> {
         if self.start < self.data.len() {
             let row_length = self.row_len;
             let filter_type = self.extract_bytes(1)?[0];
-            let mut current_row = self.extract_bytes(row_length)?.iter().map(|e| *e).collect();
+            let mut current_row = self.extract_bytes(row_length)?.to_vec();
             let previous_row = &self.previous_row;
             let error = remove_filter(
                 &mut current_row,
-                &previous_row,
+                previous_row,
                 FilterType::from(filter_type),
                 self.bpp,
             );
 
-            if error.is_err() {
-                return Some(Err(error.unwrap_err()));
+            if let Err(e) = error {
+                return Some(Err(e));
             }
             self.previous_row = current_row.clone();
             Some(Ok(current_row))
@@ -638,16 +641,16 @@ impl From<PngHeader> for Chunk {
         data.push(ihdr.filter);
         data.push(ihdr.interlace);
         // calculate the CRC which incldues the  compresion type, color type, bith depth, filter, interlace and chunch type.
-        let mut raw_data: Vec<u8> = c_type.iter().map(|element| *element).collect();
+        let mut raw_data: Vec<u8> = c_type.to_vec();
         raw_data.extend_from_slice(&data[..]);
         let crc = crc(&raw_data);
 
-        return Chunk {
+        Chunk {
             length: SZ_IHDR as u32,
             c_type,
             data,
             crc,
-        };
+        }
     }
 }
 
@@ -800,11 +803,11 @@ pub const gAMA_TYPE: &[u8; 4] = b"gAMA";
 /// Validates data length
 ///
 #[doc(hidden)]
-fn parse_ihdr_data(data: &Vec<u8>) -> Result<PngHeader, Box<dyn Error>> {
+fn parse_ihdr_data(data: &[u8]) -> Result<PngHeader, Box<dyn Error>> {
     if data.len() != 13 {
-        return Err(Box::new(PNGError::ParssingError(
+        Err(Box::new(PNGError::ParssingError(
             "Could not parse IHDR information".into(),
-        )));
+        )))
     } else {
         // Parse each field for the IHDR header
         let width = u32::from_be_bytes(data[0..4].try_into()?);
@@ -814,7 +817,7 @@ fn parse_ihdr_data(data: &Vec<u8>) -> Result<PngHeader, Box<dyn Error>> {
         let compression = data[10];
         let filter = data[11];
         let interlace = data[12];
-        return Ok(PngHeader {
+        Ok(PngHeader {
             width,
             height,
             bit_depth,
@@ -822,39 +825,39 @@ fn parse_ihdr_data(data: &Vec<u8>) -> Result<PngHeader, Box<dyn Error>> {
             compression,
             filter,
             interlace,
-        });
+        })
     }
 }
 
 #[allow(dead_code, unused_variables)]
-fn update_crc(crc: u32, data: &Vec<u8>) -> u32 {
+fn update_crc(crc: u32, data: &[u8]) -> u32 {
     let mut c = crc;
 
     for n in 0..data.len() {
         c = CRC_TABLE[(c ^ data[n] as u32) as usize & 0xff] ^ (c >> 8);
     }
-    return c;
+    c
 }
 
 /// determine the CRC of a chunk of data
 #[doc(hidden)]
 #[allow(dead_code, unused_variables)]
-fn crc(data: &Vec<u8>) -> [u8; 4] {
-    return (update_crc(0xffffffff_u32, data) ^ 0xffffffff_u32).to_be_bytes();
+fn crc(data: &[u8]) -> [u8; 4] {
+    (update_crc(0xffffffff_u32, data) ^ 0xffffffff_u32).to_be_bytes()
 }
 
 /// validate the given bit depth for the IHDR header chunk
 #[doc(hidden)]
 #[allow(dead_code, unused_variables)]
 fn valid_bit_depth(color_type: u8, value: u8) -> bool {
-    return match color_type {
+    match color_type {
         GRAY_SCALE_CTYPE => vec![1, 2, 4, 8, 16].contains(&value),
         RGB_CTYPE => vec![8, 12].contains(&value),
         PALETTE_INDEX_CTYPE => vec![1, 2, 4, 8].contains(&value),
         GREY_SCALE_ALPHA_CTYPE => vec![8, 16].contains(&value),
         RGB_ALPHA_CTYPE => vec![8, 16].contains(&value),
         _ => false,
-    };
+    }
 }
 
 /// Remove the applied filters from the picture
@@ -884,7 +887,7 @@ fn valid_bit_depth(color_type: u8, value: u8) -> bool {
 #[allow(dead_code, unused_variables)]
 fn remove_filter(
     current_row: &mut Vec<u8>,
-    previous_row: &Vec<u8>,
+    previous_row: &[u8],
     filter_type: FilterType,
     bpp: usize,
 ) -> Result<(), PNGError> {
@@ -940,26 +943,26 @@ fn paeth_predictor(a: u8, b: u8, c: u8) -> u8 {
     let pb = (p - b as i32).abs();
     let pc = (p - c as i32).abs();
     if pa <= pb && pa <= pc {
-        return a;
+        a
     } else if pb <= pc {
-        return b;
+        b
     } else {
-        return c;
+        c
     }
 }
 
 /// convert image data into a vector of colors for RGBA with 8 bits of depth
-fn rgba_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn rgba_eight_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for chunk in image_data[..].chunks_exact(4) {
-        let color = Color::from_slice(&chunk[..]);
+        let color = Color::from_slice(chunk);
         pixels.push(color);
     }
     pixels
 }
 
 /// convert image data into a vector of colors for RGBA with 16 bits of depth
-fn rgba_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn rgba_sixteen_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     let max = 65535.0;
     for chunk in image_data[..].chunks_exact(8) {
@@ -974,7 +977,7 @@ fn rgba_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for gray scale with 16 bits of depth
-fn gray_scale_with_alpha_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_with_alpha_sixteen_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     let max = 65535.0;
     for chunk in image_data[..].chunks_exact(4) {
@@ -987,7 +990,7 @@ fn gray_scale_with_alpha_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for gray scale with 8 bits of depth
-fn gray_scale_with_alpha_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_with_alpha_eight_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for chunk in image_data[..].chunks_exact(2) {
         let color = Color::rgba(chunk[0], chunk[0], chunk[0], chunk[1]);
@@ -997,10 +1000,10 @@ fn gray_scale_with_alpha_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for palette indexes with 8 bits of depth
-fn palette_index_eight_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
+fn palette_index_eight_bits(image_data: &[u8], plte: &Plte) -> Vec<Color> {
     let mut pixels = Vec::new();
 
-    for color_index in &image_data[..] {
+    for color_index in image_data {
         if (*color_index as usize) < plte.colors.len() {
             pixels.push(plte.colors[*color_index as usize]);
         }
@@ -1010,7 +1013,7 @@ fn palette_index_eight_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for palette indexes with 4 bits of depth
-fn palette_index_four_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
+fn palette_index_four_bits(image_data: &[u8], plte: &Plte) -> Vec<Color> {
     let mut pixels = Vec::new();
 
     for byte in image_data {
@@ -1026,7 +1029,7 @@ fn palette_index_four_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for palette indexes with 2 bits of depth
-fn palette_index_two_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
+fn palette_index_two_bits(image_data: &[u8], plte: &Plte) -> Vec<Color> {
     let mut pixels = Vec::new();
 
     for byte in image_data {
@@ -1042,7 +1045,7 @@ fn palette_index_two_bits(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for palette indexes with 1 bits of depth
-fn palette_index_one_bit(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
+fn palette_index_one_bit(image_data: &[u8], plte: &Plte) -> Vec<Color> {
     let mut pixels = Vec::new();
 
     for byte in image_data {
@@ -1057,7 +1060,7 @@ fn palette_index_one_bit(image_data: &Vec<u8>, plte: &PLTE) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for RGB 16 bits of depth
-fn rgb_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn rgb_sixteen_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     let max = 65535.0;
     for chunk in image_data[..].chunks_exact(6) {
@@ -1071,17 +1074,17 @@ fn rgb_sixteen_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for RGB 8 bits of depth
-fn rgb_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn rgb_eight_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for chunk in image_data[..].chunks_exact(3) {
-        let color = Color::from_slice(&chunk[..]);
+        let color = Color::from_slice(chunk);
         pixels.push(color)
     }
     pixels
 }
 
 /// convert image data into a vector of colors for gray scale 8 bits of depth
-fn gray_scale_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_eight_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for byte in image_data {
         pixels.push(Color::rgb(*byte, *byte, *byte));
@@ -1090,7 +1093,7 @@ fn gray_scale_eight_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for gray scale 4 bits of depth
-fn gray_scale_four_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_four_bits(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for byte in image_data {
         let mut value = *byte;
@@ -1103,7 +1106,7 @@ fn gray_scale_four_bits(image_data: &Vec<u8>) -> Vec<Color> {
     pixels
 }
 /// convert image data into a vector of colors for gray scale 2 bits of depth
-fn gray_scale_two_bits(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_two_bits(image_data: &[u8]) -> Vec<Color> {
     // This was a bit weird to figure out
     // thankfully go has a sample
     //<https://golang.org/src/image/png/reader.go>
@@ -1120,7 +1123,7 @@ fn gray_scale_two_bits(image_data: &Vec<u8>) -> Vec<Color> {
 }
 
 /// convert image data into a vector of colors for gray scale 1 bits of depth
-fn gray_scale_one_bit(image_data: &Vec<u8>) -> Vec<Color> {
+fn gray_scale_one_bit(image_data: &[u8]) -> Vec<Color> {
     let mut pixels = Vec::new();
     for byte in image_data {
         let mut value = *byte;

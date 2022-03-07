@@ -50,7 +50,7 @@ where
         let mut result = Self::identity();
         result.inner[0][2] = vx;
         result.inner[1][2] = vy;
-        return result;
+        result
     }
 
     /// create a scale matrix with the given x and y transform values
@@ -61,7 +61,7 @@ where
         let mut result = Self::identity();
         result.inner[0][0] = cx;
         result.inner[1][1] = cy;
-        return result;
+        result
     }
     /// create a rotate matrix with the given x and y transform values
     pub fn rotate(alpha: f32) -> Mat3x3<f32>
@@ -75,7 +75,7 @@ where
 
         result.inner[1][0] = alpha.sin();
         result.inner[1][1] = alpha.cos();
-        return result;
+        result
     }
 
     /// Calculate the determinant of this matrix
@@ -128,7 +128,7 @@ where
         result.inner[2][2] =
             self.inner[0][0] * self.inner[1][1] - self.inner[1][0] * self.inner[0][1];
 
-        return result / self.det();
+        result / self.det()
     }
 
     /// Transform a single point given this matrix (useful on affine transforms)
@@ -158,7 +158,7 @@ where
                 result.inner[r][c] = self.inner[r][c].cast();
             }
         }
-        return result;
+        result
     }
 
     /// Useful method to convert matrix to f32 matrix
@@ -172,7 +172,7 @@ where
                 result.inner[r][c] = self.inner[r][c].cast();
             }
         }
-        return result;
+        result
     }
 }
 
@@ -458,7 +458,7 @@ where
         ]
         .into();
 
-        return a * a_mat.det() - b * b_mat.det() + c * c_mat.det() - d * d_mat.det();
+        a * a_mat.det() - b * b_mat.det() + c * c_mat.det() - d * d_mat.det()
     }
     /// Multiply by a vector  3D (useful for projection)
     pub fn vector_multiply(&self, point: Vector3D<T>) -> Vector3D<T>
@@ -512,7 +512,7 @@ where
         mat.inner[3][2] = (-far * near) / (far - near);
         mat.inner[2][3] = T::one();
         mat.inner[3][3] = T::zero();
-        return mat;
+        mat
     }
 
     /// Scale transform a scale matrix with the given x and y transform values
@@ -524,7 +524,7 @@ where
         result.inner[3][0] = vx;
         result.inner[3][1] = vy;
         result.inner[3][2] = vz;
-        return result;
+        result
     }
 
     /// create a scale matrix with the given x and y transform values
@@ -536,7 +536,7 @@ where
         result.inner[0][0] = cx;
         result.inner[1][1] = cy;
         result.inner[2][2] = cz;
-        return result;
+        result
     }
     /// create a rotate matrix with the given x and y transform values
     pub fn rotate_x(alpha: f32) -> Mat4x4<f32>
@@ -551,7 +551,7 @@ where
         result.inner[1][2] = alpha.sin();
         result.inner[2][1] = -alpha.sin();
         result.inner[2][2] = alpha.cos();
-        return result;
+        result
     }
     /// create a rotate matrix with the given x and y transform values
     pub fn rotate_y(alpha: f32) -> Mat4x4<f32>
@@ -565,7 +565,7 @@ where
 
         result.inner[2][0] = -alpha.sin();
         result.inner[2][2] = alpha.cos();
-        return result;
+        result
     }
     /// create a rotate matrix with the given x and y transform values
     pub fn rotate_z(alpha: f32) -> Mat4x4<f32>
@@ -579,7 +579,7 @@ where
 
         result.inner[1][0] = -alpha.sin();
         result.inner[1][1] = alpha.cos();
-        return result;
+        result
     }
 
     // From OLC Javidx
@@ -720,7 +720,7 @@ where
                 result.inner[r][c] = self.inner[r][c].cast();
             }
         }
-        return result;
+        result
     }
 
     /// Useful method to convert matrix to f32 matrix
@@ -734,7 +734,7 @@ where
                 result.inner[r][c] = self.inner[r][c].cast();
             }
         }
-        return result;
+        result
     }
 }
 
@@ -953,10 +953,10 @@ where
     type Output = Mat4x4<T>;
     fn mul(self, other: Mat4x4<T>) -> Self::Output {
         let mut inner: [[T; 4]; 4] = [[T::zero(); 4]; 4];
-        for i in 0..inner.len() {
-            for row in 0..self.inner.len() {
-                for col in 0..self.inner[0].len() {
-                    inner[i][row] += self.inner[i][col] * other.inner[col][row];
+        for (i, item) in inner.iter_mut().enumerate() {
+            for (row, _) in self.inner.iter().enumerate() {
+                for (col, _) in self.inner[0].iter().enumerate() {
+                    item[row] += self.inner[i][col] * other.inner[col][row];
                 }
             }
         }

@@ -18,10 +18,16 @@ impl Render2D for Graphics {
             Point2D::new(150, 250),
             Color::WHITE,
         );
+        canvas.fill_triangle(
+            Point2D::new(500, 500),
+            Point2D::new(100, 100),
+            Point2D::new(100, 500),
+            Color::MAGENTA,
+        );
         canvas.draw_string(
-            Point2D::new(100, 200),
-            "See Examples".into(),
-            0.7,
+            Point2D::new(250, 200),
+            "See Examples folder".into(),
+            0.4,
             Color::GRAY,
         );
         true
