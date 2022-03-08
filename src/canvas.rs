@@ -1,5 +1,6 @@
 use super::image::png::PngReader;
 use crate::color::Color;
+use crate::image::png::PngWriter;
 use crate::image::sprite::Sprite;
 use crate::image::sprite::SpriteExtractor;
 use crate::image::sprite::SpriteSize;
@@ -657,6 +658,36 @@ impl Canvas {
                 translate_point = FVec2D::new(translate_point.x() + width, translate_point.y());
             }
         }
+    }
+
+    /// Take a snapshot of the current canvas and save it to a png file
+    /// # Arguments
+    /// `outpath`    File path/name to the resultant PNG image
+    pub fn snap_to_file(&self, outpath: &str) -> Result<(), Box<dyn std::error::Error>> {
+        // Add file extension if missing
+        let filepath = if outpath.to_lowercase().ends_with(".png") {
+            outpath.to_owned()
+        } else {
+            format!("{}.png", outpath)
+        };
+
+        // we save the image here
+        let mut outfile = std::fs::File::create(filepath)?;
+
+        // Collect all pixels but mirror them because we are using Glium for rendiern,
+        //  we mirror the pixels in place now we have to revert this.
+        let pixels: Vec<Color> = self
+            .pixels
+            .borrow()
+            .chunks_exact(self.width as usize)
+            .rev()
+            .fold(Vec::<Color>::new(), |mut acc, newval| {
+                acc.extend_from_slice(newval);
+                acc
+            });
+        PngWriter::new(self.width, self.height, &pixels)?.write(&mut outfile)?;
+
+        Ok(())
     }
 }
 
