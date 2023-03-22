@@ -63,7 +63,7 @@ pub trait Render2D {
         let mut canvas = Canvas::new(width, height);
         let event_loop = glium::glutin::event_loop::EventLoop::new();
         let inner_size = glium::glutin::dpi::LogicalSize::new(width, height);
-        let frames_per_sec = ((1.0 / 120.0) * 1000000000.0) as u64; // 120 frames per second
+        let frames_per_sec = ((1.0 / 60.0) * 1000000000.0) as u64; // 60 frames per second
 
         let wb = glium::glutin::window::WindowBuilder::new()
             .with_inner_size(inner_size)

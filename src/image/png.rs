@@ -105,6 +105,16 @@ impl PngImage {
         Ok(pixels)
     }
 
+    /// Read all pixels in a picture as a continues stream of RGBA bytes.
+    pub fn rgba_pixels(&self) -> Result<Vec<u8>, Box<dyn Error>> {
+        let pixels = self.pixels()?;
+        let mut color_bytes = Vec::with_capacity(pixels.len() * 4);
+        pixels
+            .iter()
+            .for_each(|color| color_bytes.extend_from_slice(&color.as_bytes()));
+        Ok(color_bytes)
+    }
+
     /// Get all other chuncks in the PNG that don't contain image/pixel data
     pub fn non_data_chunks(&self) -> &Vec<Chunk> {
         &self.other_chunks
